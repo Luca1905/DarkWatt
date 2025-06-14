@@ -1,0 +1,10 @@
+{
+  "name": "DarkWatt",
+  "description": "DarkWatt tracks each tab’s luminance and CPU time to estimate energy use, revealing how much power dark mode can save.",
+  "version": "1.0",
+  "manifest_version": 3,
+  "action": {
+    "default_popup": "index.html",
+    "default_icon": "icon.png"
+  }
+}
