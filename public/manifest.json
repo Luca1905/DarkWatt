@@ -6,8 +6,9 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "script.js",
-        "popup.js"
+        "content/index.js",
+        "content/script.js",
+        "content/loader.js"
       ],
       "matches": ["http://*/*", "https://*/*"]
     }
@@ -15,12 +16,12 @@
   "content_scripts": [
     {
       "matches": ["http://*/*", "https://*/*"],
-      "js": ["content.js"],
-      "css": ["./styles/style.css"]
+      "js": ["content/loader.js"],
+      "css": ["styles/style.css"]
     }
   ],
   "action": {
-    "default_icon": "./images/icon256.png",
+    "default_icon": "images/icon256.png",
     "default_popup": "index.html"
   },
   "browser_specific_settings": {
