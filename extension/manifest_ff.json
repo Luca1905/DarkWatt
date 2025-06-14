@@ -1,0 +1,46 @@
+{
+  "manifest_version": 3,
+  "name": "DarkWatt",
+  "short_name": "DarkWatt",
+  "description": "DarkWatt is a tool that helps you find the best dark mode for your website.",
+  "version": "0.1.0",
+  "author": "@Luca1905",
+  "offline_enabled": false,
+  "action": {
+      "default_title": "DarkWatt",
+      "default_icon": {
+          "256": "assets/icon256.png"
+      },
+      "default_popup": "js/popup.html"
+  },
+  "content_security_policy": {
+      "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
+  },
+  "background": {
+      "type": "module",
+      "service_worker": "js/background.js"
+  },
+  "permissions": [
+      "webRequest"
+  ],
+  "host_permissions": [
+      "<all_urls>"
+  ],
+  "web_accessible_resources": [
+      {
+          "matches": [
+              "<all_urls>"
+          ],
+          "resources": [
+              "js/wasm/wasm_mod.js",
+              "js/wasm/wasm_mod_bg.wasm"
+          ]
+      }
+  ],
+  "browser_specific_settings": {
+      "gecko": {
+          "id": "{aed20410-8c19-4833-aa70-42223e29c364}",
+          "strict_min_version": "112.0"
+      }
+  }
+}
