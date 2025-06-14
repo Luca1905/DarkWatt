@@ -4,14 +4,15 @@
   "type": "module",
   "private": true,
   "devDependencies": {
-    "@types/bun": "latest",
+    "@types/chrome": "latest",
+    "bun-types": "latest",
     "prettier": "^3.0.3"
   },
   "peerDependencies": {
-    "typescript": "^5"
+    "typescript": "^5.0.0"
   },
   "scripts": {
-    "start": "bun index.ts",
+    "build": "bun bundler.ts",
     "format": "prettier --write '**/*.{js,jsx,ts,tsx,json,md}' '!build/**' '!node_modules/**'"
   }
 }

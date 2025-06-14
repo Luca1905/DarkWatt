@@ -1,15 +1,23 @@
 # dark-watt
 
-To install dependencies:
+## Build
 
-```bash
-bun install
+To build the extension, run:
+```bash	
+bun run build
 ```
+This will create a new folder called _build/_ with the extension files. The folder will contain the following files by default:
+- Anything in _public/_ (images, styles, manifest etc.)
+- .js and .ts files in _src/scripts/_
+This folder can be loaded as an unpacked extension in your browser.
+The files that end up in the build folder _build/_ are configured in _bundler.ts_.
 
-To run:
+## Other items
 
+### Formatting
+
+I added a .prettierrc for contributing. If building for your own purposes, feel free to remove it.
+To format with the provided configuration, run:
 ```bash
-bun run index.ts
+bun run format
 ```
-
-This project was created using `bun init` in bun v1.2.13. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
