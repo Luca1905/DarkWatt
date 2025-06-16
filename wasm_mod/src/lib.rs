@@ -9,5 +9,5 @@ extern "C" {
 
 #[wasm_bindgen]
 pub fn hello_wasm() {
-  log("Hello from WASM!");
+    log("WASM LOADING COMPLETE");
 }
