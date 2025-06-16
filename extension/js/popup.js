@@ -1,7 +1,7 @@
 console.log("popup loaded");
 
-document.addEventListener("DOMContentLoaded", () => {
-  console.log("DOMContentLoaded");
+document.addEventListener("DOMContentLoaded", async () => {
+  console.log("Toolbar button clicked");
   const mainElement = document.getElementById("main");
-  mainElement.textContent = "what";
+  mainElement.textContent = "popup js working";
 });

@@ -5,7 +5,7 @@
   "description": "DarkWatt is a tool that helps you find the best dark mode for your website.",
   "version": "0.1.0",
   "author": "@Luca1905",
-  "offline_enabled": false,
+  "offline_enabled": true,
   "action": {
       "default_title": "DarkWatt",
       "default_icon": {

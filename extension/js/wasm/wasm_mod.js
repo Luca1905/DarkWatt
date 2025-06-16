@@ -34,10 +34,6 @@ function logError(f, args) {
     }
 }
 
-export function greet() {
-    wasm.greet();
-}
-
 export function hello_wasm() {
     wasm.hello_wasm();
 }
@@ -76,9 +72,6 @@ async function __wbg_load(module, imports) {
 function __wbg_get_imports() {
     const imports = {};
     imports.wbg = {};
-    imports.wbg.__wbg_alert_8c4e4284e01d0c5f = function() { return logError(function (arg0, arg1) {
-        alert(getStringFromWasm0(arg0, arg1));
-    }, arguments) };
     imports.wbg.__wbg_log_99f1084c10ea0369 = function() { return logError(function (arg0, arg1) {
         console.log(getStringFromWasm0(arg0, arg1));
     }, arguments) };
