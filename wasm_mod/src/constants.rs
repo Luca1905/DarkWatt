@@ -10,3 +10,19 @@ pub const BT_709: LumaCoefficients = LumaCoefficients {
     g: 0.7152,
     b: 0.0722,
 };
+
+pub const L_MAX: f32 = 250.0; // Later expose setting to change screen brightness
+
+/// Inverse BT.709 / sRGB opto-electronic transfer function (OETF)
+///
+/// Turn encoded E′ (0–1) into a linear-light value Y (0–1):
+///
+/// Y = E′ / 12.92                           , if E′ ≤ 0.04045  
+/// Y = ((E′ + 0.055) / 1.055) ^ 2.4         , otherwise
+pub mod oetf_inv {
+  pub const CUTOFF: f32   = 0.040_45; // encoded threshold
+  pub const SLOPE: f32    = 12.92;    // 1 / toe slope in the forward curve
+  pub const ALPHA: f32    = 0.055;
+  pub const SCALE: f32    = 1.055;
+  pub const GAMMA: f32    = 2.4;
+}
