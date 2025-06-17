@@ -1,7 +1,5 @@
 console.log('CONTENT SCRIPT LOADED');
 
-let db;
-
 async function captureScreenshot() {
   const screenshotDataUrl = await chrome.runtime.sendMessage({
     action: 'capture_screenshot',
@@ -52,47 +50,11 @@ async function calculateLuminance(pixels) {
   return luminance;
 }
 
-function initDatabase() {
-  return new Promise((resolve, reject) => {
-    const DBOpenRequest = window.indexedDB.open('darkWatt-storage', 1);
-    DBOpenRequest.onerror = (event) => {
-      console.error('Error opening database:', event.target.error);
-      reject(event.target.error);
-    };
-    DBOpenRequest.onsuccess = () => {
-      db = DBOpenRequest.result;
-      resolve();
-    };
-    DBOpenRequest.onupgradeneeded = (event) => {
-      db = event.target.result;
-      const objectStore = db.createObjectStore('darkWatt-storage', {
-        keyPath: 'date',
-      });
-      objectStore.createIndex('date', 'date', { unique: true });
-    };
-  });
-}
-
 function saveLuminanceData(luminance) {
-  const transaction = db.transaction('darkWatt-storage', 'readwrite');
-  transaction.onerror = (event) => {
-    console.error(
-      'Error saving luminance data to database:',
-      event.target.error
-    );
-  };
-  transaction.oncomplete = () => {
-    console.log('Transaction completed');
-  };
-
-  const objectStore = transaction.objectStore('darkWatt-storage');
-  const objectStoreRequest = objectStore.add({
-    date: new Date().toISOString(),
-    luminance,
+  chrome.runtime.sendMessage({
+    action: 'save_luminance_data',
+    data: luminance,
   });
-  objectStoreRequest.onsuccess = () => {
-    console.log('Request successful.');
-  };
 }
 
 async function processScreenshot() {
@@ -111,7 +73,6 @@ async function processScreenshot() {
 (async () => {
   try {
     if (document.visibilityState !== 'visible') return;
-    await initDatabase();
 
     (async function run() {
       try {

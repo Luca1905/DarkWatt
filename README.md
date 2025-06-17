@@ -11,8 +11,11 @@ Roadmap: from zero to a working DarkWatt demo
 -[x] tests
 -[x] integrate into js, test using mock data
 
--[ ] screenshot current tab and draw to smaller canvas
--[ ] implement background service for handling luma data
+-[x] screenshot current tab and draw to smaller canvas
+-[x] implement background service for handling luma data
+  -[x] create a dxdb in background
+  -[x] set up message connections to get and save luma data
+-[ ] render data in UI
 
 -[ ] get CPU usage data
 -[ ] store data in dxdb, expose to popup
