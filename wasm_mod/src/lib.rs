@@ -1,5 +1,6 @@
 mod utils;
 use wasm_bindgen::prelude::*;
+use web_sys::console;
 
 mod constants;
 use constants::{oetf_inv as inv, BT_709 as W, L_MAX};
@@ -8,14 +9,8 @@ mod pixel;
 use pixel::Rgba;
 
 #[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace=console)]
-    fn log(s: &str);
-}
-
-#[wasm_bindgen]
 pub fn hello_wasm() {
-    log("WASM LOADING COMPLETE");
+    console::log_1(&"WASM LOADING COMPLETE".into());
 }
 
 #[wasm_bindgen]

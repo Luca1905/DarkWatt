@@ -21,7 +21,20 @@
       "service_worker": "js/background.js"
   },
   "permissions": [
-      "webRequest"
+      "webRequest",
+      "activeTab",
+      "tabs"
+  ],
+  "content_scripts": [
+      {
+          "matches": [
+              "<all_urls>"
+          ],
+          "js": [
+              "js/content.js"
+          ],
+          "run_at": "document_idle"
+      }
   ],
   "host_permissions": [
       "<all_urls>"

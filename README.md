@@ -9,7 +9,7 @@ Roadmap: from zero to a working DarkWatt demo
 -[x] UI scaffhold
 -[x] Luminenance logic
 -[x] tests
--[ ] integrate into js, test using mock data
+-[x] integrate into js, test using mock data
 
 -[ ] screenshot current tab and draw to smaller canvas
 -[ ] implement background service for handling luma data
