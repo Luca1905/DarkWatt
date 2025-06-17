@@ -2,7 +2,10 @@ mod utils;
 use wasm_bindgen::prelude::*;
 
 mod constants;
-use constants::{L_MAX, oetf_inv as inv, BT_709 as W};
+use constants::{oetf_inv as inv, BT_709 as W, L_MAX};
+
+mod pixel;
+use pixel::Rgba;
 
 #[wasm_bindgen]
 extern "C" {
@@ -23,13 +26,8 @@ pub fn average_luma_relative(pixels: &[u8]) -> f32 {
     let mut sum_weight = 0.0_f32;
 
     for chunk in pixels.chunks_exact(4) {
-        let (r, g, b, a) = (chunk[0], chunk[1], chunk[2], chunk[3]);
-
-        // normalise channels to 0-1
-        let rf: f32 = r as f32 / 255.0;
-        let gf: f32 = g as f32 / 255.0;
-        let bf: f32 = b as f32 / 255.0;
-        let af: f32 = a as f32 / 255.0; // alpha as weight
+        let pixel = Rgba::from_slice(chunk);
+        let (rf, gf, bf, af) = pixel.normalized();
 
         let y: f32 = W.r * rf + W.g * gf + W.b * bf;
 
@@ -133,7 +131,12 @@ mod tests {
     fn nits_black_is_zero() {
         let data = solid_rgba(0, 0, 0, 255, 16);
         let nits = average_luma_in_nits(&data);
-        assert!(nits.abs() < EPS, "calculated nits: {}, expected: {}", nits, 0.0);
+        assert!(
+            nits.abs() < EPS,
+            "calculated nits: {}, expected: {}",
+            nits,
+            0.0
+        );
     }
 
     #[test]
@@ -141,25 +144,35 @@ mod tests {
         use crate::constants::L_MAX;
         let data = solid_rgba(255, 255, 255, 255, 16);
         let nits = average_luma_in_nits(&data);
-        assert!((nits - L_MAX).abs() < EPS, "calculated nits: {}, expected: {}", nits, L_MAX);
+        assert!(
+            (nits - L_MAX).abs() < EPS,
+            "calculated nits: {}, expected: {}",
+            nits,
+            L_MAX
+        );
     }
 
     #[test]
     fn nits_mid_grey_matches_expected() {
-        use crate::constants::{L_MAX, oetf_inv as inv};
+        use crate::constants::{oetf_inv as inv, L_MAX};
         // 50% grey with 50% alpha, replicated across several pixels
-        let data = solid_rgba(128, 128, 128, 128, 16);
+        let data: Vec<u8> = solid_rgba(128, 128, 128, 128, 16);
 
         // Expected value, computed independently
-        let ey = average_luma_relative(&data);
-        let y_linear = if ey <= inv::CUTOFF {
+        let ey: f32 = average_luma_relative(&data);
+        let y_linear: f32 = if ey <= inv::CUTOFF {
             ey / inv::SLOPE
         } else {
             ((ey + inv::ALPHA) / inv::SCALE).powf(inv::GAMMA)
         };
-        let expected_nits = y_linear * L_MAX;
+        let expected_nits: f32 = y_linear * L_MAX;
 
-        let nits = average_luma_in_nits(&data);
-        assert!((nits - expected_nits).abs() < EPS, "calculated nits: {}, expected: {}", nits, expected_nits);
+        let nits: f32 = average_luma_in_nits(&data);
+        assert!(
+            (nits - expected_nits).abs() < EPS,
+            "calculated nits: {}, expected: {}",
+            nits,
+            expected_nits
+        );
     }
 }
