@@ -6,15 +6,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (latestLuminanceData) {
     document.getElementById(
       'current-luminance'
-    ).textContent = `${data.luminance.toFixed(2)} nits`;
+    ).textContent = `${latestLuminanceData.luminance.toFixed(2)} nits`;
   }
 
-  const lastWeekLuminanceData = await getLuminanceDataForDateRange(
+  const lastWeekAverageLuminance = await getLuminanceAverageForDateRange(
     new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days ago
-    new Date()
+    new Date().toISOString()
   );
-  if (lastWeekLuminanceData) {
-    document.getElementById('last-week-luminance').textContent = `${lastWeekLuminanceData.luminance.toFixed(2)} nits`;
+  if (lastWeekAverageLuminance) {
+    document.getElementById('week-savings').textContent = `${lastWeekAverageLuminance.toFixed(2)} nits`;
   }
 });
 
@@ -39,7 +39,7 @@ async function getLatestLuminanceData() {
   });
 }
 
-async function getLuminanceDataForDateRange(startDate, endDate) {
+async function getLuminanceAverageForDateRange(startDate, endDate) {
   return new Promise((resolve, reject) => {
     chrome.runtime.sendMessage(
       {

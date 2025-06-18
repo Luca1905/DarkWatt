@@ -3,10 +3,8 @@ import initWasmModule, {
   average_luma_in_nits,
 } from './wasm/wasm_mod.js';
 
-
 const DB_NAME = 'darkWatt-storage';
 const DB_VERSION = 1;
-
 
 function openDatabase() {
   return new Promise((resolve, reject) => {
@@ -39,7 +37,7 @@ async function saveLuminanceData(luminance, url) {
     store.add({ date: new Date().toISOString(), luminance, url });
   });
 }
-  
+
 async function getLatestLuminanceData() {
   const db = await openDatabase();
   return new Promise((resolve, reject) => {
@@ -57,21 +55,36 @@ async function getLatestLuminanceData() {
   });
 }
 
-async function getLuminanceDataForDateRange(startDate, endDate) {
+async function getLuminanceAverageForDateRange(startDate, endDate) {
   const db = await openDatabase();
   return new Promise((resolve, reject) => {
+    const weekData = [];
+    const keyRange = IDBKeyRange.bound(startDate, endDate);
+
     const tx = db.transaction(DB_NAME, 'readonly');
     tx.onerror = () => reject(tx.error);
 
     const store = tx.objectStore(DB_NAME);
-    const request = store.get(IDBKeyRange(startDate, endDate));
 
-    request.onerror = () => reject(request.error);
-    request.onsuccess = (event) => {
-      resolve(event.target.result);
+    store.openCursor(keyRange).onsuccess = (event) => {
+      const cursor = event.target.result;
+      if (cursor) {
+        weekData.push(cursor.value);
+        cursor.continue();
+      } else {
+        console.log(`Collected data for range: ${startDate} to ${endDate}`);
+        console.log(weekData);
+        const averageLuminance =
+          weekData.reduce((acc, curr) => acc + curr.luminance, 0) /
+          weekData.length;
+        resolve(averageLuminance);
+      }
     };
   });
 }
+
+async function getAllLuminanceData() {}
+async function getLuminanceDataForDate() {}
 
 (async () => {
   await initWasmModule();
@@ -84,7 +97,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     case 'capture_screenshot': {
       chrome.tabs.captureVisibleTab(null, { format: 'png' }, (dataUrl) => {
         if (chrome.runtime.lastError) {
-          console.error('Error capturing screenshot:', chrome.runtime.lastError);
+          console.error(
+            'Error capturing screenshot:',
+            chrome.runtime.lastError
+          );
           sendResponse(null);
         } else {
           sendResponse(dataUrl);
@@ -136,7 +152,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 
     case 'get_luminance_data_for_date_range': {
-      getLuminanceDataForDateRange(request.startDate, request.endDate)
+      getLuminanceAverageForDateRange(request.startDate, request.endDate)
         .then((data) => sendResponse(data))
         .catch((err) => {
           console.error('Error fetching luminance data:', err);
