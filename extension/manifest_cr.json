@@ -22,7 +22,6 @@
   },
   "permissions": [
       "webRequest",
-      "activeTab",
       "tabs"
   ],
   "host_permissions": [

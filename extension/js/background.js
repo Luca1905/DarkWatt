@@ -1,10 +1,16 @@
 import initWasmModule, {
   hello_wasm,
   average_luma_in_nits,
+  average_luma_in_nits_from_data_uri,
 } from './wasm/wasm_mod.js';
 
 const DB_NAME = 'darkWatt-storage';
 const DB_VERSION = 1;
+
+let latestSample = null;
+const SAMPLE_INTERVAL = 1000;
+
+let isSampling = false;
 
 function openDatabase() {
   return new Promise((resolve, reject) => {
@@ -25,7 +31,7 @@ function openDatabase() {
   });
 }
 
-async function saveLuminanceData(luminance, url) {
+async function saveLuminanceData(data) {
   const db = await openDatabase();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(DB_NAME, 'readwrite');
@@ -34,7 +40,7 @@ async function saveLuminanceData(luminance, url) {
     tx.oncomplete = () => resolve();
 
     const store = tx.objectStore(DB_NAME);
-    store.add({ date: new Date().toISOString(), luminance, url });
+    store.add(data);
   });
 }
 
@@ -72,8 +78,9 @@ async function getLuminanceAverageForDateRange(startDate, endDate) {
         weekData.push(cursor.value);
         cursor.continue();
       } else {
-        console.log(`Collected data for range: ${startDate} to ${endDate}`);
-        console.log(weekData);
+        console.log(
+          `Collected data for range: ${startDate} to ${endDate}, ${weekData.length} samples`
+        );
         const averageLuminance =
           weekData.reduce((acc, curr) => acc + curr.luminance, 0) /
           weekData.length;
@@ -83,32 +90,81 @@ async function getLuminanceAverageForDateRange(startDate, endDate) {
   });
 }
 
-async function getAllLuminanceData() {}
-async function getLuminanceDataForDate() {}
+async function getAllLuminanceData() {
+  // TODO: implement
+}
+async function getLuminanceDataForDate() {
+  // TODO: implement
+}
 
-(async () => {
+async function sampleActiveTab() {
+  const [tab] = await chrome.tabs.query({
+    active: true,
+    lastFocusedWindow: true,
+  });
+  if (!tab) return;
+
+  const dataUrl = await captureScreenshot();
+  if (!dataUrl) return;
+
+  const nits = average_luma_in_nits_from_data_uri(dataUrl);
+  latestSample = { luminance: nits, url: tab.url, date: new Date() };
+  return latestSample;
+}
+
+async function captureScreenshot() {
+  return new Promise((resolve, reject) => {
+    chrome.tabs.captureVisibleTab(null, { format: 'png' }, (dataUrl) => {
+      if (chrome.runtime.lastError) {
+        console.error(
+          'Error capturing screenshot:',
+          chrome.runtime.lastError.message
+        );
+        reject();
+      } else {
+        resolve(dataUrl);
+      }
+    });
+  });
+}
+
+async function main() {
+  // init
   await initWasmModule();
   hello_wasm();
   openDatabase().catch(console.error);
-})();
+
+  sampleLoop();
+}
+
+async function sampleLoop() {
+  const t0 = performance.now();
+
+  try {
+    const sample = await sampleActiveTab();
+    console.log('sample', sample);
+    if (sample) {
+      await saveLuminanceData(sample);
+    }
+  } catch (err) {
+    console.error('Sample loop error:', err);
+  }
+  const elapsed = performance.now() - t0;
+  setTimeout(sampleLoop, Math.max(0, SAMPLE_INTERVAL - elapsed));
+}
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   switch (request.action) {
-    case 'capture_screenshot': {
-      chrome.tabs.captureVisibleTab(null, { format: 'png' }, (dataUrl) => {
-        if (chrome.runtime.lastError) {
-          console.error(
-            'Error capturing screenshot:',
-            chrome.runtime.lastError
-          );
-          sendResponse(null);
-        } else {
-          sendResponse(dataUrl);
-        }
-      });
-      return true;
+    case 'average_luma': {
+      try {
+        const data = new Uint8Array(request.data);
+        const result = average_luma(data);
+        sendResponse(result);
+      } catch (err) {
+        console.error('Error computing luma:', err);
+        sendResponse(null);
+      }
     }
-
     case 'average_luma_in_nits': {
       try {
         const data = new Uint8Array(request.data);
@@ -121,7 +177,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return false;
     }
 
-    case 'get_latest_luminance_data': {
+    case 'get_current_luminance_data': {
       getLatestLuminanceData()
         .then((data) => sendResponse(data))
         .catch((err) => {
@@ -161,18 +217,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return true;
     }
 
-    case 'save_luminance_data': {
-      saveLuminanceData(request.data.luminance, request.data.url)
-        .then(() => sendResponse(true))
-        .catch((err) => {
-          console.error('Error saving luminance data:', err);
-          sendResponse(false);
-        });
-      return true;
-    }
-
     default:
       sendResponse(null);
       return false;
   }
 });
+
+main();
