@@ -50,10 +50,10 @@ async function calculateLuminance(pixels) {
   return luminance;
 }
 
-function saveLuminanceData(luminance) {
+function saveLuminanceData(data) {
   chrome.runtime.sendMessage({
     action: 'save_luminance_data',
-    data: luminance,
+    data,
   });
 }
 
@@ -66,35 +66,27 @@ async function processScreenshot() {
   const luminance = await calculateLuminance(pixels);
 
   if (luminance !== null) {
-    saveLuminanceData(luminance);
+    saveLuminanceData({ luminance, url: window.location.href });
   }
 }
 
-(async () => {
+setInterval(async () => {
+  if (document.visibilityState !== 'visible') return;
   try {
-    if (document.visibilityState !== 'visible') return;
-
-    (async function run() {
-      try {
-        if (!chrome.runtime?.id) {
-          console.log(
-            'Extension context invalidated. Stopping screenshot processing.'
-          );
-          return;
-        }
-        await processScreenshot();
-        setTimeout(run, 1000);
-      } catch (error) {
-        if (error.message.includes('Extension context invalidated')) {
-          console.log(
-            'Extension context invalidated. Stopping screenshot processing.'
-          );
-        } else {
-          console.error('Error in screenshot processing loop:', error);
-        }
-      }
-    })();
+    if (!chrome.runtime?.id) {
+      console.log(
+        'Extension context invalidated. Stopping screenshot processing.'
+      );
+      return;
+    }
+    await processScreenshot();
   } catch (error) {
-    console.error('Failed to initialize database:', error);
+    if (error.message.includes('Extension context invalidated')) {
+      console.log(
+        'Extension context invalidated. Stopping screenshot processing.'
+      );
+    } else {
+      console.error('Error in screenshot processing loop:', error);
+    }
   }
-})();
+}, 1000);

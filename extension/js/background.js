@@ -19,6 +19,7 @@ function openDatabase() {
       if (!db.objectStoreNames.contains(DB_NAME)) {
         const store = db.createObjectStore(DB_NAME, { keyPath: 'date' });
         store.createIndex('date', 'date', { unique: true });
+        store.createIndex('url', 'url', { unique: false });
       }
     };
 
@@ -26,7 +27,7 @@ function openDatabase() {
   });
 }
 
-async function saveLuminanceData(luminance) {
+async function saveLuminanceData(luminance, url) {
   const db = await openDatabase();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(DB_NAME, 'readwrite');
@@ -35,7 +36,7 @@ async function saveLuminanceData(luminance) {
     tx.oncomplete = () => resolve();
 
     const store = tx.objectStore(DB_NAME);
-    store.add({ date: new Date().toISOString(), luminance });
+    store.add({ date: new Date().toISOString(), luminance, url });
   });
 }
   
@@ -52,6 +53,22 @@ async function getLatestLuminanceData() {
     request.onsuccess = (event) => {
       const cursor = event.target.result;
       resolve(cursor ? cursor.value : null);
+    };
+  });
+}
+
+async function getLuminanceDataForDateRange(startDate, endDate) {
+  const db = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(DB_NAME, 'readonly');
+    tx.onerror = () => reject(tx.error);
+
+    const store = tx.objectStore(DB_NAME);
+    const request = store.get(IDBKeyRange(startDate, endDate));
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = (event) => {
+      resolve(event.target.result);
     };
   });
 }
@@ -73,7 +90,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           sendResponse(dataUrl);
         }
       });
-      return true; // async
+      return true;
     }
 
     case 'average_luma_in_nits': {
@@ -88,7 +105,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return false;
     }
 
-    case 'get_luminance_data': {
+    case 'get_latest_luminance_data': {
       getLatestLuminanceData()
         .then((data) => sendResponse(data))
         .catch((err) => {
@@ -98,8 +115,38 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return true;
     }
 
+    case 'get_all_luminance_data': {
+      getAllLuminanceData()
+        .then((data) => sendResponse(data))
+        .catch((err) => {
+          console.error('Error fetching luminance data:', err);
+          sendResponse(null);
+        });
+      return true;
+    }
+
+    case 'get_luminance_data_for_date': {
+      getLuminanceDataForDate(request.date)
+        .then((data) => sendResponse(data))
+        .catch((err) => {
+          console.error('Error fetching luminance data:', err);
+          sendResponse(null);
+        });
+      return true;
+    }
+
+    case 'get_luminance_data_for_date_range': {
+      getLuminanceDataForDateRange(request.startDate, request.endDate)
+        .then((data) => sendResponse(data))
+        .catch((err) => {
+          console.error('Error fetching luminance data:', err);
+          sendResponse(null);
+        });
+      return true;
+    }
+
     case 'save_luminance_data': {
-      saveLuminanceData(request.data)
+      saveLuminanceData(request.data.luminance, request.data.url)
         .then(() => sendResponse(true))
         .catch((err) => {
           console.error('Error saving luminance data:', err);
