@@ -9,6 +9,7 @@ mod pixel;
 use pixel::Rgba;
 
 use data_url::DataUrl;
+use image::{imageops::FilterType, DynamicImage};
 
 #[wasm_bindgen]
 pub fn hello_wasm() {
@@ -56,24 +57,40 @@ pub fn average_luma_in_nits(pixels: &[u8]) -> f32 {
 
 #[wasm_bindgen]
 pub fn average_luma_in_nits_from_data_uri(uri: &str) -> f32 {
-    let data_url = DataUrl::process(uri).unwrap();
-    let mime = format!(
-        "{}/{}",
-        data_url.mime_type().type_,
-        data_url.mime_type().subtype
-    );
-
-    if mime != "image/png" {
-        console::log_1(&"Unsupported image format".into());
-        return 0.0;
+    match process_data_uri(uri) {
+        Ok(nits) => nits,
+        Err(err) => {
+            console::log_1(&format!("WASM: failed to process data URI: {}", err).into());
+            0.0
+        }
     }
+}
 
-    let (bytes, _fragment) = data_url.decode_to_vec().unwrap();
+fn process_data_uri(uri: &str) -> Result<f32, String> {
+    // 1. Decode the data URI to bytes
+    let bytes = decode_data_uri(uri)?;
 
-    let img = image::load_from_memory(&bytes).unwrap();
-    let pixels = img.to_rgba8().into_raw();
+    // 2. Decode PNG/JPEG/whatever to RGBA8 image
+    let img = image::load_from_memory(&bytes).map_err(|e| format!("image decode error: {}", e))?;
 
-    average_luma_in_nits(&pixels)
+    // 3. Downscale to 16×16
+    let small = downscale_to_16(&img);
+
+    Ok(average_luma_in_nits(&small))
+}
+
+fn decode_data_uri(uri: &str) -> Result<Vec<u8>, String> {
+    let data_url = DataUrl::process(uri).map_err(|e| format!("invalid data URI: {}", e))?;
+
+    let (bytes, _fragment) = data_url
+        .decode_to_vec()
+        .map_err(|e| format!("base64 decode error: {}", e))?;
+    Ok(bytes)
+}
+
+fn downscale_to_16(img: &DynamicImage) -> Vec<u8> {
+    let resized: DynamicImage = img.resize_exact(16, 16, FilterType::Triangle);
+    resized.to_rgba8().into_raw()
 }
 
 // Tests
