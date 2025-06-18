@@ -8,6 +8,8 @@ use constants::{oetf_inv as inv, BT_709 as W, L_MAX};
 mod pixel;
 use pixel::Rgba;
 
+use data_url::DataUrl;
+
 #[wasm_bindgen]
 pub fn hello_wasm() {
     console::log_1(&"WASM LOADING COMPLETE".into());
@@ -50,6 +52,28 @@ pub fn average_luma_in_nits(pixels: &[u8]) -> f32 {
     };
 
     y_linear * L_MAX
+}
+
+#[wasm_bindgen]
+pub fn average_luma_in_nits_from_data_uri(uri: &str) -> f32 {
+    let data_url = DataUrl::process(uri).unwrap();
+    let mime = format!(
+        "{}/{}",
+        data_url.mime_type().type_,
+        data_url.mime_type().subtype
+    );
+
+    if mime != "image/png" {
+        console::log_1(&"Unsupported image format".into());
+        return 0.0;
+    }
+
+    let (bytes, _fragment) = data_url.decode_to_vec().unwrap();
+
+    let img = image::load_from_memory(&bytes).unwrap();
+    let pixels = img.to_rgba8().into_raw();
+
+    average_luma_in_nits(&pixels)
 }
 
 // Tests
@@ -168,6 +192,18 @@ mod tests {
             "calculated nits: {}, expected: {}",
             nits,
             expected_nits
+        );
+    }
+
+    #[test]
+    fn nits_from_data_uri_black_is_zero() {
+        let data_uri = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+        let nits = average_luma_in_nits_from_data_uri(data_uri);
+        assert!(
+            nits.abs() < EPS,
+            "calculated nits: {}, expected: {}",
+            nits,
+            0.0
         );
     }
 }
