@@ -2,11 +2,11 @@ console.log('popup loaded');
 
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('Toolbar button clicked');
-  const latestLuminanceData = await getLatestLuminanceData();
-  if (latestLuminanceData) {
+  const currentLuminanceData = await getCurrentLuminanceData();
+  if (currentLuminanceData) {
     document.getElementById(
       'current-luminance'
-    ).textContent = `${latestLuminanceData.luminance.toFixed(2)} nits`;
+    ).textContent = `${currentLuminanceData.luminance.toFixed(2)} nits`;
   }
 
   const lastWeekAverageLuminance = await getLuminanceAverageForDateRange(
@@ -14,15 +14,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     new Date().toISOString()
   );
   if (lastWeekAverageLuminance) {
-    document.getElementById('week-savings').textContent = `${lastWeekAverageLuminance.toFixed(2)} nits`;
+    document.getElementById(
+      'week-savings'
+    ).textContent = `${lastWeekAverageLuminance.toFixed(2)} nits`;
   }
 });
 
-async function getLatestLuminanceData() {
+async function getCurrentLuminanceData() {
   return new Promise((resolve, reject) => {
     chrome.runtime.sendMessage(
       {
-        action: 'get_latest_luminance_data',
+        action: 'get_current_luminance_data',
       },
       (response) => {
         if (chrome.runtime.lastError) {
