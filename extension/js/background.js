@@ -10,8 +10,6 @@ const DB_VERSION = 1;
 let latestSample = null;
 const SAMPLE_INTERVAL = 1000;
 
-let isSampling = false;
-
 function openDatabase() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -164,6 +162,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         console.error('Error computing luma:', err);
         sendResponse(null);
       }
+      return false;
     }
     case 'average_luma_in_nits': {
       try {
