@@ -20,6 +20,9 @@
 - [ ] get CPU usage data
 - [x] store data in dxdb, expose to popup
 
+- [ ] remove annoying errors on installation
+  - [ ] error when on chrome://
+  - [ ] exceeding MAX_CAPTURE_VISIBLE_TAB_CALLS_PER_SECOND
 ### Popup:
 - [x] get data from background
 - [ ] render data in UI
