@@ -70,9 +70,7 @@ async function getLuminanceAverageForDateRange(startDate, endDate) {
 
     const store = tx.objectStore(DB_NAME);
 
-    store.openCursor(keyRange).onsuccess = (event) => {
-      const cursor = event.target.result;
-      if (cursor) {
+    store.openCursor(keyRange).onsuccess = (event) => { const cursor = event.target.result; if (cursor) {
         weekData.push(cursor.value);
         cursor.continue();
       } else {
@@ -89,10 +87,56 @@ async function getLuminanceAverageForDateRange(startDate, endDate) {
 }
 
 async function getAllLuminanceData() {
-  // TODO: implement
+  const db = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(DB_NAME, 'readonly');
+    tx.onerror = () => reject(tx.error);
+
+    const store = tx.objectStore(DB_NAME);
+
+    const request = store.getAll();
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = (event) => {
+      resolve(event.target.result.value);
+    }
+  });
 }
-async function getLuminanceDataForDate() {
-  // TODO: implement
+
+async function getLuminanceDataForDate(date) {
+  const dayBeginning = new Date(date);
+  dayBeginning.setHours(0,0,0,0);
+  const dayEnding = new Date(date);
+  dayEnding.setHours(0,0,0,0);
+  
+  const db = await openDatabase();
+
+  return new Promise((resolve, reject) => {
+    const dayData = [];
+    const keyRange = IDBKeyRange.bound(dayBeginning, dayEnding);
+
+    const tx = db.transaction(DB_NAME, 'readonly');
+    tx.onerror = () => reject(tx.error);
+
+    const store = tx.objectStore(DB_NAME);
+
+    store.openCursor(keyRange).onsuccess = (event) => {
+      const cursor = event.target.result;
+      if (cursor) {
+        dayData.push(cursor.value);
+        cursor.continue();
+      } else {
+        console.log(
+          `Collected data for range: ${startDate} to ${endDate}, ${dayData.length} samples`
+        );
+        const averageLuminance =
+          dayData.reduce((acc, curr) => acc + curr.luminance, 0) /
+          dayData.length;
+        resolve(averageLuminance);
+      }
+    };
+  });
+  
 }
 
 async function sampleActiveTab() {
@@ -106,7 +150,7 @@ async function sampleActiveTab() {
   if (!dataUrl) return;
 
   const nits = average_luma_in_nits_from_data_uri(dataUrl);
-  latestSample = { luminance: nits, url: tab.url, date: new Date() };
+  latestSample = { luminance: nits, url: tab.url, date: new Date().toISOString() };
   return latestSample;
 }
 
