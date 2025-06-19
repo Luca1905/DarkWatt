@@ -16,14 +16,16 @@
 - [x] implement background service for handling luma data
   - [x] create a dxdb in background
   - [x] set up message connections to get and save luma data
-- [ ] render data in UI
-
+  - [ ] implement savings logic
 - [ ] get CPU usage data
-- [ ] store data in dxdb, expose to popup
+- [x] store data in dxdb, expose to popup
 
 ### Popup:
-- [ ] get data from background
-- [ ] render data to UI
+- [x] get data from background
+- [ ] render data in UI
+  - [x] render most current data
+  - [x] render total tracked sites
+  - [ ] render savings
 - [ ] settings page for custom values
 - [ ] analytics page
 

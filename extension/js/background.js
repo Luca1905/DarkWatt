@@ -70,7 +70,9 @@ async function getLuminanceAverageForDateRange(startDate, endDate) {
 
     const store = tx.objectStore(DB_NAME);
 
-    store.openCursor(keyRange).onsuccess = (event) => { const cursor = event.target.result; if (cursor) {
+    store.openCursor(keyRange).onsuccess = (event) => {
+      const cursor = event.target.result;
+      if (cursor) {
         weekData.push(cursor.value);
         cursor.continue();
       } else {
@@ -99,16 +101,16 @@ async function getAllLuminanceData() {
     request.onerror = () => reject(request.error);
     request.onsuccess = (event) => {
       resolve(event.target.result.value);
-    }
+    };
   });
 }
 
 async function getLuminanceDataForDate(date) {
   const dayBeginning = new Date(date);
-  dayBeginning.setHours(0,0,0,0);
+  dayBeginning.setHours(0, 0, 0, 0);
   const dayEnding = new Date(date);
-  dayEnding.setHours(0,0,0,0);
-  
+  dayEnding.setHours(0, 0, 0, 0);
+
   const db = await openDatabase();
 
   return new Promise((resolve, reject) => {
@@ -136,7 +138,31 @@ async function getLuminanceDataForDate(date) {
       }
     };
   });
-  
+}
+
+async function getTotalTrackedSites() {
+  const db = await openDatabase();
+
+  return new Promise((resolve, reject) => {
+    let totalSites = 0;
+
+    const tx = db.transaction(DB_NAME, 'readonly');
+    tx.onerror = () => reject(tx.error);
+
+    const store = tx.objectStore(DB_NAME);
+    const indexedByUrl = store.index('url');
+
+    indexedByUrl.openCursor(null, 'nextunique').onsuccess = (event) => {
+      const cursor = event.target.result;
+      if (cursor) {
+        totalSites++;
+
+        cursor.continue();
+      } else {
+        resolve(totalSites);
+      }
+    };
+  });
 }
 
 async function sampleActiveTab() {
@@ -150,7 +176,11 @@ async function sampleActiveTab() {
   if (!dataUrl) return;
 
   const nits = average_luma_in_nits_from_data_uri(dataUrl);
-  latestSample = { luminance: nits, url: tab.url, date: new Date().toISOString() };
+  latestSample = {
+    luminance: nits,
+    url: tab.url,
+    date: new Date().toISOString(),
+  };
   return latestSample;
 }
 
@@ -252,6 +282,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     case 'get_luminance_data_for_date_range': {
       getLuminanceAverageForDateRange(request.startDate, request.endDate)
+        .then((data) => sendResponse(data))
+        .catch((err) => {
+          console.error('Error fetching luminance data:', err);
+          sendResponse(null);
+        });
+      return true;
+    }
+
+    case 'get_total_tracked_sites': {
+      getTotalTrackedSites()
         .then((data) => sendResponse(data))
         .catch((err) => {
           console.error('Error fetching luminance data:', err);
