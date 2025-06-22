@@ -1,4 +1,92 @@
-# TODO
+# DarkWatt
+
+DarkWatt is a browser extension that helps you track the energy comsumption of your screen. It captures a down-scaled screenshot of the current tab (locally of course), computes the average luminance, and adds it with CPU usage statistics by the browser. The resulting data is persisted locally so you can find the sites that are the most battery-friendly.
+
+## Features
+
+* Real-time measurement of page luminance (in nits).
+* Tracks per-tab CPU time (requires the experimental `chrome.processes` API).
+* Cross-browser packaging (Chromium & Firefox Nightly).
+* Core pixel maths implemented in Rust + WebAssembly.
+
+## Browser Support & Limitations
+
+> **Important notice:** DarkWatt relies on the experimental `chrome.processes` API to monitor CPU usage. Consequently, the extension currently functions only in the **Chrome/Chromium Dev channel**. You can download a Dev build from <https://www.chromium.org/getting-involved/dev-channel/>. The API is documented at <https://developer.chrome.com/extensions/processes>.
+
+Firefox support is planned.w
+
+## Installation
+
+### Prerequisites
+
+* latest Chrome or Chromium Dev channel
+* If you plan to build from source:
+  * Rust ≥ 1.70
+  * [`wasm-pack`](https://rustwasm.github.io/wasm-pack/)
+  * A Bash-compatible shell (for `build.sh`)
+
+### 1. Download a pre-built release (recommended)
+
+Pre-built `.zip` packages are attached to every GitHub release.
+
+1. Download the archive matching your browser.
+2. Unzip it somewhere.
+3. Open `chrome://extensions` (or `about:debugging#/runtime/this-firefox` in Firefox).
+4. Enable "Developer mode" and click "Load unpacked".
+5. Select the extracted `build/chrome` or `build/firefox` directory.
+
+### 2. Build from source
+
+```bash
+# Clone and build the project
+$ git clone https://github.com/Luca1905/darkwatt.git
+$ cd darkwatt
+$ ./build.sh       # compiles the WASM crate and creates the extension bundles
+```
+
+The script outputs two ready-to-load directories:
+
+* `build/chrome/` – load this in Chromium based browsers.
+* `build/firefox/` – load this in Firefox Nightly.
+
+## Usage
+
+1. Load the extension as described above.
+2. Pin the DarkWatt icon to the toolbar.
+3. Browse as usual; open the popup anytime to see live luminance and accumulated energy data for the current website.
+
+## Development
+
+```bash
+# Run Rust unit tests
+$ cargo test -p wasm-mod
+
+# Build only the WASM crate
+$ wasm-pack build wasm_mod --dev --target web --out-dir ../extension/js/wasm --out-name wasm_mod
+```
+
+Press the reload button on `chrome://extensions` to pick up the changes.
+
+## Testing
+```bash
+cargo test -p wasm-mod
+```
+
+## Project Structure
+
+```
+.
+├── extension/          # WebExtension source (JS/HTML/CSS)
+│   ├── js/             # background & popup scripts
+│   └── assets/         # icons & images
+├── wasm_mod/           # Rust crate compiled to WebAssembly
+├── build.sh            # helper script to build and package the extension
+└── media/              # project visuals (logo, screenshots)
+```
+
+## License
+
+DarkWatt is released under the MIT License – see the [LICENSE](LICENSE) file for full text.
 
 ## Roadmap: from zero to a working DarkWatt demo
 
@@ -37,8 +125,3 @@
 - [ ] deploy
 
 
-Important note: this extension uses a Chrome experimental feature to monitor the cpu usage, and thus is only available with the Chrome dev release.
-
-Chrome dev release could be downloaded and installed here: https://www.chromium.org/getting-involved/dev-channel
-
-The processes API is documented here: https://developer.chrome.com/extensions/processes
