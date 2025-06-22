@@ -1,6 +1,7 @@
 import initWasmModule, {
   hello_wasm,
-  average_luma_in_nits, average_luma_in_nits_from_data_uri,
+  average_luma_in_nits,
+  average_luma_in_nits_from_data_uri,
 } from './wasm/wasm_mod.js';
 
 const DB_NAME = 'darkWatt-storage';
@@ -28,8 +29,15 @@ function openDatabase() {
   });
 }
 
-async function saveLuminanceData(data) {
+async function saveLuminanceData(nits, url) {
   const db = await openDatabase();
+
+  latestSample = {
+    luminance: nits,
+    url: url,
+    date: new Date().toISOString(),
+  };
+
   return new Promise((resolve, reject) => {
     const tx = db.transaction(DB_NAME, 'readwrite');
 
@@ -37,7 +45,7 @@ async function saveLuminanceData(data) {
     tx.oncomplete = () => resolve();
 
     const store = tx.objectStore(DB_NAME);
-    store.add(data);
+    store.add(latestSample);
   });
 }
 
@@ -164,25 +172,6 @@ async function getTotalTrackedSites() {
   });
 }
 
-async function sampleActiveTab() {
-  const [tab] = await chrome.tabs.query({
-    active: true,
-    lastFocusedWindow: true,
-  });
-  if (!tab) return;
-
-  const dataUrl = await captureScreenshot();
-  if (!dataUrl) return;
-
-  const nits = average_luma_in_nits_from_data_uri(dataUrl);
-  latestSample = {
-    luminance: nits,
-    url: tab.url,
-    date: new Date().toISOString(),
-  };
-  return latestSample;
-}
-
 async function captureScreenshot() {
   return new Promise((resolve, reject) => {
     chrome.tabs.captureVisibleTab(null, { format: 'png' }, (dataUrl) => {
@@ -199,13 +188,60 @@ async function captureScreenshot() {
   });
 }
 
+async function sampleActiveTab() {
+  const [tab] = await chrome.tabs.query({
+    active: true,
+    lastFocusedWindow: true,
+  });
+  if (!tab) return;
+
+  const dataUrl = await captureScreenshot();
+  if (!dataUrl) return;
+
+  return {
+    sample: average_luma_in_nits_from_data_uri(dataUrl),
+    url: tab.url,
+  };
+}
+
+async function broadcastStats() {
+  try {
+    await chrome.runtime.sendMessage({
+      action: 'stats_update',
+      stats: {
+        currentLuminance: latestSample?.luminance ?? null,
+        totalTrackedSites: await getTotalTrackedSites(),
+        cpuUsage: null,
+      },
+    });
+  } catch (err) {
+    console.error('[BACKGROUND] Error broadcasting stats:', err);
+  }
+}
+
+async function sampleLoop() {
+  const t0 = performance.now();
+
+  try {
+    const response = await sampleActiveTab();
+    if (response) {
+      await saveLuminanceData(response.sample, response.url);
+      await broadcastStats();
+      console.log('saved sample', response.sample, response.url);
+    }
+  } catch (err) {
+    console.error('Sample loop error:', err);
+  }
+  const elapsed = performance.now() - t0;
+  setTimeout(sampleLoop, Math.max(0, SAMPLE_INTERVAL - elapsed));
+}
+
 async function main() {
   // init
   await initWasmModule();
   hello_wasm();
   openDatabase().catch(console.error);
 
-  sampleLoop();
   chrome.processes.onUpdated.addListener(async (processes) => {
     const [currentTab] = await chrome.tabs.query({
       active: true,
@@ -213,27 +249,23 @@ async function main() {
     });
     if (!currentTab) return;
 
-    let activeProcessId = await chrome.processes.getProcessIdForTab(currentTab.id);
+    let activeProcessId = await chrome.processes.getProcessIdForTab(
+      currentTab.id
+    );
     let activeProcess = processes[activeProcessId];
 
-    console.log("[STATS] current CPU usage: ", activeProcess.cpu);
-  })
-}
-
-async function sampleLoop() {
-  const t0 = performance.now();
-
-  try {
-    const sample = await sampleActiveTab();
-    console.log('sample', sample);
-    if (sample) {
-      await saveLuminanceData(sample);
-    }
-  } catch (err) {
-    console.error('Sample loop error:', err);
-  }
-  const elapsed = performance.now() - t0;
-  setTimeout(sampleLoop, Math.max(0, SAMPLE_INTERVAL - elapsed));
+    console.log('[STATS] current CPU usage: ', activeProcess.cpu);
+    const response = await chrome.runtime.sendMessage({
+      action: 'stats_update',
+      stats: {
+        currentLuminance: latestSample.luminance,
+        totalTrackedSites: await getTotalTrackedSites(),
+        cpuUsage: activeProcess.cpu,
+      },
+    });
+    console.log('[BACKGROUND] updated stats: ', response);
+  });
+  sampleLoop();
 }
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
