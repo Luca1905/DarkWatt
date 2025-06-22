@@ -2,25 +2,36 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DarkWatt - Power Savings Tracker</title>
     <script type="module" src="popup.js"></script>
     <style>
+      * {
+        box-sizing: border-box;
+      }
+
       body {
-        width: 320px;
-        min-height: 400px;
+        width: 380px;
+        min-height: 480px;
         margin: 0;
-        padding: 20px;
+        padding: 24px;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
           sans-serif;
         background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
         color: #ffffff;
-        box-sizing: border-box;
+        transition: all 0.3s ease;
+      }
+
+      @media (max-width: 400px) {
+        body {
+          width: 340px;
+          padding: 20px;
+        }
       }
 
       .header {
         text-align: center;
         margin-bottom: 24px;
+        animation: fadeInDown 0.6s ease-out;
       }
 
       .logo {
@@ -28,12 +39,20 @@
         font-weight: 700;
         color: #4ade80;
         margin-bottom: 8px;
+        transition: transform 0.3s ease, color 0.3s ease;
+        cursor: default;
+      }
+
+      .logo:hover {
+        transform: scale(1.05);
+        color: #22c55e;
       }
 
       .subtitle {
         font-size: 14px;
         color: #a3a3a3;
         margin: 0;
+        transition: color 0.3s ease;
       }
 
       .stats-container {
@@ -42,6 +61,16 @@
         padding: 20px;
         margin-bottom: 20px;
         border: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        transition: all 0.3s ease;
+        animation: fadeInUp 0.6s ease-out 0.2s both;
+      }
+
+      .stats-container:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(74, 222, 128, 0.3);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
       }
 
       .stat-item {
@@ -49,6 +78,15 @@
         justify-content: space-between;
         align-items: center;
         margin-bottom: 16px;
+        padding: 8px 0;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+      }
+
+      .stat-item:hover {
+        background: rgba(255, 255, 255, 0.05);
+        padding-left: 8px;
+        padding-right: 8px;
       }
 
       .stat-item:last-child {
@@ -58,35 +96,117 @@
       .stat-label {
         font-size: 14px;
         color: #d4d4d4;
+        transition: color 0.2s ease;
+      }
+
+      .stat-item:hover .stat-label {
+        color: #ffffff;
       }
 
       .stat-value {
         font-size: 18px;
         font-weight: 600;
         color: #4ade80;
+        transition: all 0.2s ease;
+        position: relative;
+      }
+
+      .stat-value::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        width: 0;
+        height: 2px;
+        background: linear-gradient(90deg, #4ade80, #22c55e);
+        transition: width 0.3s ease;
+      }
+
+      .stat-item:hover .stat-value::after {
+        width: 100%;
       }
 
       .power-indicator {
         display: flex;
         align-items: center;
         justify-content: center;
-        background: rgba(74, 222, 128, 0.1);
-        border-radius: 8px;
-        padding: 12px;
+        background: linear-gradient(
+          135deg,
+          rgba(74, 222, 128, 0.15),
+          rgba(34, 197, 94, 0.1)
+        );
+        border-radius: 12px;
+        padding: 16px;
         margin-bottom: 20px;
+        border: 1px solid rgba(74, 222, 128, 0.2);
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        animation: fadeInUp 0.6s ease-out 0.1s both;
+      }
+
+      .power-indicator::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(255, 255, 255, 0.1),
+          transparent
+        );
+        transition: left 0.6s ease;
+      }
+
+      .power-indicator:hover {
+        background: linear-gradient(
+          135deg,
+          rgba(74, 222, 128, 0.25),
+          rgba(34, 197, 94, 0.15)
+        );
+        border-color: rgba(74, 222, 128, 0.4);
+        transform: translateY(-3px) scale(1.02);
+        box-shadow: 0 10px 30px rgba(74, 222, 128, 0.2);
+      }
+
+      .power-indicator:hover::before {
+        left: 100%;
+      }
+
+      .power-indicator:active {
+        transform: translateY(-1px) scale(0.98);
       }
 
       .power-icon {
-        width: 20px;
-        height: 20px;
-        margin-right: 8px;
+        width: 22px;
+        height: 22px;
+        margin-right: 10px;
         fill: #4ade80;
+        transition: all 0.3s ease;
+        filter: drop-shadow(0 0 4px rgba(74, 222, 128, 0.3));
+      }
+
+      .power-indicator:hover .power-icon {
+        fill: #22c55e;
+        transform: rotate(15deg) scale(1.1);
+        filter: drop-shadow(0 0 8px rgba(74, 222, 128, 0.5));
       }
 
       .status-text {
         font-size: 14px;
         color: #4ade80;
         font-weight: 500;
+        transition: all 0.3s ease;
+        text-shadow: 0 0 4px rgba(74, 222, 128, 0.2);
+      }
+
+      .power-indicator:hover .status-text {
+        color: #22c55e;
+        text-shadow: 0 0 8px rgba(74, 222, 128, 0.4);
       }
 
       .footer {
@@ -94,6 +214,128 @@
         font-size: 12px;
         color: #737373;
         margin-top: 20px;
+        transition: color 0.3s ease;
+        animation: fadeIn 0.6s ease-out 0.4s both;
+      }
+
+      .footer:hover {
+        color: #a3a3a3;
+      }
+
+      /* Animations */
+      @keyframes fadeInDown {
+        from {
+          opacity: 0;
+          transform: translateY(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      /* Pulse animation for power icon */
+      @keyframes pulse {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
+        }
+      }
+
+      .power-icon.active {
+        animation: pulse 2s infinite;
+      }
+
+      /* Loading skeleton animation */
+      .stat-value.loading {
+        background: linear-gradient(
+          90deg,
+          #4ade80 25%,
+          #22c55e 50%,
+          #4ade80 75%
+        );
+        background-size: 200% 100%;
+        animation: shimmer 2s infinite;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      @keyframes shimmer {
+        0% {
+          background-position: -200% 0;
+        }
+        100% {
+          background-position: 200% 0;
+        }
+      }
+
+      /* Responsive improvements */
+      @media (max-width: 400px) {
+        .stat-item {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 4px;
+        }
+
+        .stat-value {
+          font-size: 16px;
+        }
+
+        .power-indicator {
+          padding: 12px;
+        }
+
+        .power-icon {
+          width: 20px;
+          height: 20px;
+          margin-right: 8px;
+        }
+      }
+
+      /* Dark mode enhancements */
+      @media (prefers-color-scheme: dark) {
+        body {
+          background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+        }
+
+        .stats-container {
+          background: rgba(255, 255, 255, 0.03);
+          border-color: rgba(255, 255, 255, 0.08);
+        }
+      }
+
+      /* Focus states for accessibility */
+      .power-indicator:focus {
+        outline: 2px solid #4ade80;
+        outline-offset: 2px;
+      }
+
+      .power-indicator:focus:not(:focus-visible) {
+        outline: none;
       }
     </style>
   </head>
@@ -103,8 +345,13 @@
       <p class="subtitle">Dark Mode Energy Tracker</p>
     </div>
 
-    <div class="power-indicator">
-      <svg class="power-icon" viewBox="0 0 24 24">
+    <div
+      class="power-indicator"
+      tabindex="0"
+      role="button"
+      aria-label="Power tracking status"
+    >
+      <svg class="power-icon active" viewBox="0 0 24 24">
         <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
       </svg>
       <span class="status-text">Tracking Power Savings</span>
@@ -113,30 +360,24 @@
     <div class="stats-container">
       <div class="stat-item">
         <span class="stat-label">Current Luminance</span>
-        <span class="stat-value" id="current-luminance">-- nits</span>
+        <span class="stat-value loading" id="current-luminance">-- nits</span>
       </div>
       <div class="stat-item">
         <span class="stat-label">Today's Savings</span>
-        <span class="stat-value" id="today-savings">-- mWh</span>
+        <span class="stat-value loading" id="today-savings">-- mWh</span>
       </div>
       <div class="stat-item">
         <span class="stat-label">This Week</span>
-        <span class="stat-value" id="week-savings">-- mWh</span>
+        <span class="stat-value loading" id="week-savings">-- mWh</span>
       </div>
       <div class="stat-item">
         <span class="stat-label">Total Saved</span>
-        <span class="stat-value" id="total-savings">-- mWh</span>
+        <span class="stat-value loading" id="total-savings">-- mWh</span>
       </div>
       <div class="stat-item">
         <span class="stat-label">Total tracked websites</span>
-        <span class="stat-value" id="total-sites">--</span>
+        <span class="stat-value loading" id="total-sites">--</span>
       </div>
-    </div>
-
-    <main id="log-summary"></main>
-
-    <div class="footer">
-      Making the web more energy efficient, one site at a time
     </div>
   </body>
 </html>

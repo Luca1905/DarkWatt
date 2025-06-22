@@ -25,7 +25,7 @@
   - [ ] exceeding MAX_CAPTURE_VISIBLE_TAB_CALLS_PER_SECOND
 ### Popup:
 - [x] get data from background
-- [ ] render data in UI
+- [x] render data in UI
   - [x] render most current data
   - [x] render total tracked sites
   - [ ] render savings
