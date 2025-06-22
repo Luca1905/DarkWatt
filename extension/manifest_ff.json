@@ -17,13 +17,13 @@
       "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
   },
   "background": {
-      "scripts": ["js/background.js"],
-      "type": "module"
+      "type": "module",
+      "service_worker": "js/background.js"
   },
   "permissions": [
       "webRequest",
-      "activeTab",
-      "tabs"
+      "tabs",
+      "processes"
   ],
   "host_permissions": [
       "<all_urls>"
@@ -41,7 +41,7 @@
   ],
   "browser_specific_settings": {
       "gecko": {
-          "id": "{aed20410-8c19-4833-aa70-42223e29c364}",
+          "id": "darkwatt@lucawang.me",
           "strict_min_version": "112.0"
       }
   }
