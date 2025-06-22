@@ -70,10 +70,10 @@ fn process_data_uri(uri: &str) -> Result<f32, String> {
     // 1. Decode the data URI to bytes
     let bytes = decode_data_uri(uri)?;
 
-    // 2. Decode PNG/JPEG/whatever to RGBA8 image
+    // 2. Decode to rgba values
     let img = image::load_from_memory(&bytes).map_err(|e| format!("image decode error: {}", e))?;
 
-    // 3. Downscale to 16×16
+    // 3. Downscale
     let small = downscale_to_16(&img);
 
     Ok(average_luma_in_nits(&small))

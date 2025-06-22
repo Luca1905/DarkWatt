@@ -22,7 +22,8 @@
   },
   "permissions": [
       "webRequest",
-      "tabs"
+      "tabs",
+      "processes"
   ],
   "host_permissions": [
       "<all_urls>"

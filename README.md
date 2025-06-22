@@ -32,5 +32,13 @@
 - [ ] settings page for custom values
 - [ ] analytics page
 
+- [ ] port background to web_sys using wasm
 - [ ] firefox integration
 - [ ] deploy
+
+
+Important note: this extension uses a Chrome experimental feature to monitor the cpu usage, and thus is only available with the Chrome dev release.
+
+Chrome dev release could be downloaded and installed here: https://www.chromium.org/getting-involved/dev-channel
+
+The processes API is documented here: https://developer.chrome.com/extensions/processes

@@ -1,7 +1,6 @@
 import initWasmModule, {
   hello_wasm,
-  average_luma_in_nits,
-  average_luma_in_nits_from_data_uri,
+  average_luma_in_nits, average_luma_in_nits_from_data_uri,
 } from './wasm/wasm_mod.js';
 
 const DB_NAME = 'darkWatt-storage';
@@ -207,6 +206,18 @@ async function main() {
   openDatabase().catch(console.error);
 
   sampleLoop();
+  chrome.processes.onUpdated.addListener(async (processes) => {
+    const [currentTab] = await chrome.tabs.query({
+      active: true,
+      lastFocusedWindow: true,
+    });
+    if (!currentTab) return;
+
+    let activeProcessId = await chrome.processes.getProcessIdForTab(currentTab.id);
+    let activeProcess = processes[activeProcessId];
+
+    console.log("[STATS] current CPU usage: ", activeProcess.cpu);
+  })
 }
 
 async function sampleLoop() {
