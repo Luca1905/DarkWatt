@@ -176,11 +176,7 @@ async function captureScreenshot() {
   return new Promise((resolve, reject) => {
     chrome.tabs.captureVisibleTab(null, { format: 'png' }, (dataUrl) => {
       if (chrome.runtime.lastError) {
-        console.error(
-          'Error capturing screenshot:',
-          chrome.runtime.lastError.message
-        );
-        reject();
+        reject(chrome.runtime.lastError);
       } else {
         resolve(dataUrl);
       }
@@ -189,19 +185,32 @@ async function captureScreenshot() {
 }
 
 async function sampleActiveTab() {
-  const [tab] = await chrome.tabs.query({
-    active: true,
-    lastFocusedWindow: true,
-  });
-  if (!tab) return;
+  try {
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      lastFocusedWindow: true,
+    });
+    if (!tab) return null;
 
-  const dataUrl = await captureScreenshot();
-  if (!dataUrl) return;
+    const response = await captureScreenshot().then(
+      (dataUrl) => (typeof dataUrl !== 'string' ? null : dataUrl),
+      (err) => {
+        throw new Error({ message: err.message });
+      }
+    );
 
-  return {
-    sample: average_luma_in_nits_from_data_uri(dataUrl),
-    url: tab.url,
-  };
+    if (!response) return null;
+
+    return {
+      sample: average_luma_in_nits_from_data_uri(response),
+      url: tab.url,
+    };
+  } catch (err) {
+    console.log(`[SAMPLE - ${new Date().toISOString()}] skipped sample:`, {
+      message: err.message,
+    });
+    return null;
+  }
 }
 
 async function broadcastStats() {
@@ -215,7 +224,11 @@ async function broadcastStats() {
       },
     });
   } catch (err) {
-    console.error('[BACKGROUND] Error broadcasting stats:', err);
+    console.log(
+      `[STATS  - ${new Date().toISOString()}] skipped stats update:`,
+      { message: err }
+    );
+    return;
   }
 }
 
@@ -227,10 +240,17 @@ async function sampleLoop() {
     if (response) {
       await saveLuminanceData(response.sample, response.url);
       await broadcastStats();
-      console.log('saved sample', response.sample, response.url);
+      console.log(
+        `[SAMPLE - ${new Date().toISOString()}] saved sample ${
+          response.sample
+        } for ${response.url} `
+      );
     }
   } catch (err) {
-    console.error('Sample loop error:', err);
+    console.error(
+      `[SAMPLE - ${new Date().toISOString()}] Sample loop error:`,
+      err
+    );
   }
   const elapsed = performance.now() - t0;
   setTimeout(sampleLoop, Math.max(0, SAMPLE_INTERVAL - elapsed));
@@ -242,29 +262,6 @@ async function main() {
   hello_wasm();
   openDatabase().catch(console.error);
 
-  chrome.processes.onUpdated.addListener(async (processes) => {
-    const [currentTab] = await chrome.tabs.query({
-      active: true,
-      lastFocusedWindow: true,
-    });
-    if (!currentTab) return;
-
-    let activeProcessId = await chrome.processes.getProcessIdForTab(
-      currentTab.id
-    );
-    let activeProcess = processes[activeProcessId];
-
-    console.log('[STATS] current CPU usage: ', activeProcess.cpu);
-    const response = await chrome.runtime.sendMessage({
-      action: 'stats_update',
-      stats: {
-        currentLuminance: latestSample.luminance,
-        totalTrackedSites: await getTotalTrackedSites(),
-        cpuUsage: activeProcess.cpu,
-      },
-    });
-    console.log('[BACKGROUND] updated stats: ', response);
-  });
   sampleLoop();
 }
 
@@ -346,6 +343,41 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     default:
       sendResponse(null);
       return false;
+  }
+});
+
+// duplicate stats broadcast, for accesss to processes ( CPU Usage )
+chrome.processes.onUpdated.addListener(async (processes) => {
+  try {
+    const [currentTab] = await chrome.tabs.query({
+      active: true,
+      lastFocusedWindow: true,
+    });
+    if (!currentTab) return;
+
+    let activeProcessId = await chrome.processes.getProcessIdForTab(
+      currentTab.id
+    );
+    let activeProcess = processes[activeProcessId];
+
+    const response = await chrome.runtime.sendMessage({
+      action: 'stats_update',
+      stats: {
+        currentLuminance: latestSample?.luminance ?? null,
+        totalTrackedSites: await getTotalTrackedSites(),
+        cpuUsage: activeProcess.cpu,
+      },
+    });
+    console.log(
+      `[STATS  - ${new Date().toISOString()}] updated stats: `,
+      response
+    );
+  } catch (err) {
+    console.log(
+      `[STATS  - ${new Date().toISOString()}] skipped stats update:`,
+      { message: err }
+    );
+    return;
   }
 });
 

@@ -13,7 +13,7 @@ use image::{imageops::FilterType, DynamicImage};
 
 #[wasm_bindgen]
 pub fn hello_wasm() {
-    console::log_1(&"WASM LOADING COMPLETE".into());
+    console::log_1(&"[WASM] LOADING COMPLETE".into());
 }
 
 #[wasm_bindgen]
@@ -60,7 +60,7 @@ pub fn average_luma_in_nits_from_data_uri(uri: &str) -> f32 {
     match process_data_uri(uri) {
         Ok(nits) => nits,
         Err(err) => {
-            console::log_1(&format!("WASM: failed to process data URI: {}", err).into());
+            console::log_1(&format!("[WASM] failed to process data URI: {}", err).into());
             0.0
         }
     }

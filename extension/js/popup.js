@@ -1,4 +1,4 @@
-console.log('popup loaded');
+console.log('[UI] popup loaded');
 
 const appState = {
   currentLuminance: null,
