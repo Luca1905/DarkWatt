@@ -1,3 +1,4 @@
+#[derive(Copy, Clone)]
 pub(crate) struct Rgba {
     pub(crate) r: u8,
     pub(crate) g: u8,

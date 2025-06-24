@@ -20,8 +20,22 @@ pub const L_MAX: f32 = 250.0; // Later expose setting to change screen brightnes
 /// Y = E′ / 12.92                           , if E′ ≤ 0.04045  
 /// Y = ((E′ + 0.055) / 1.055) ^ 2.4         , otherwise
 pub mod oetf_inv {
-    pub const CUTOFF: f32 = 0.040_45; // encoded threshold
-    pub const SLOPE: f32 = 12.92; // 1 / toe slope in the forward curve
+    pub const CUTOFF: f32 = 0.040_45;
+    pub const SLOPE: f32 = 12.92;
+    pub const ALPHA: f32 = 0.055;
+    pub const SCALE: f32 = 1.055;
+    pub const GAMMA: f32 = 2.4;
+}
+
+/// Forward BT.709 / sRGB opto-electronic transfer function (OETF)
+///
+/// Turn a linear-light value Y (0–1) into an encoded value E′ (0–1):
+///
+/// E′ = 12.92 × Y                       , if Y ≤ 0.0031308
+/// E′ = 1.055 × Y^(1/2.4) − 0.055       , otherwise
+pub mod oetf {
+    pub const CUTOFF: f32 = 0.003_130_8;
+    pub const SLOPE: f32 = 12.92;
     pub const ALPHA: f32 = 0.055;
     pub const SCALE: f32 = 1.055;
     pub const GAMMA: f32 = 2.4;

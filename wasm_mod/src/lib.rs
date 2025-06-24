@@ -3,7 +3,7 @@ use wasm_bindgen::prelude::*;
 use web_sys::console;
 
 mod constants;
-use constants::{oetf_inv as inv, BT_709 as W, L_MAX};
+use constants::{oetf_inv as inv, oetf as fwd, BT_709 as W, L_MAX};
 
 mod pixel;
 use pixel::Rgba;
@@ -27,7 +27,7 @@ pub fn average_luma_relative(pixels: &[u8]) -> f32 {
         let pixel = Rgba::from_slice(chunk);
         let (rf, gf, bf, af) = pixel.normalized();
 
-        let y: f32 = W.r * rf + W.g * gf + W.b * bf;
+        let y: f32 = W.r.mul_add(rf, W.g.mul_add(gf, W.b * bf));
 
         sum_luma += y * af;
         sum_weight += af;
@@ -91,6 +91,81 @@ fn decode_data_uri(uri: &str) -> Result<Vec<u8>, String> {
 fn downscale_to_16(img: &DynamicImage) -> Vec<u8> {
     let resized: DynamicImage = img.resize_exact(16, 16, FilterType::Triangle);
     resized.to_rgba8().into_raw()
+}
+
+#[wasm_bindgen]
+pub fn convert_to_dark_mode(pixels: &[u8]) -> Vec<u8> {
+    debug_assert!(pixels.len() % 4 == 0);
+    
+    let mut result = Vec::with_capacity(pixels.len());
+    
+    for chunk in pixels.chunks_exact(4) {
+        let pixel = Rgba::from_slice(chunk);
+        let dark_pixel = convert_pixel_to_dark_mode(&pixel);
+        result.extend_from_slice(&[dark_pixel.r, dark_pixel.g, dark_pixel.b, dark_pixel.a]);
+    }
+    
+    result
+}
+
+fn convert_pixel_to_dark_mode(pixel: &Rgba) -> Rgba {
+    let (rf, gf, bf, af) = pixel.normalized();  // 0-1
+    
+    // transparent pixels are skipped
+    if af < 0.01 {
+        return *pixel;
+    }
+    
+    let (r_linear, g_linear, b_linear) = srgb_to_linear(rf, gf, bf);
+    let (r_dark, g_dark, b_dark) = apply_dark_mode_transform(r_linear, g_linear, b_linear);
+    let (r_srgb, g_srgb, b_srgb) = linear_to_srgb(r_dark, g_dark, b_dark);
+    
+    Rgba {
+        r: (r_srgb * 255.0).round().clamp(0.0, 255.0) as u8,
+        g: (g_srgb * 255.0).round().clamp(0.0, 255.0) as u8,
+        b: (b_srgb * 255.0).round().clamp(0.0, 255.0) as u8,
+        a: pixel.a,
+    }
+}
+
+#[inline]
+fn srgb_to_linear(r: f32, g: f32, b: f32) -> (f32, f32, f32) {
+    #[inline]
+    fn comp(c: f32) -> f32 {
+        if c <= inv::CUTOFF {
+            c / inv::SLOPE
+        } else {
+            ((c + inv::ALPHA) / inv::SCALE).powf(inv::GAMMA)
+        }
+    }
+    (comp(r), comp(g), comp(b))
+}
+
+#[inline]
+fn linear_to_srgb(r: f32, g: f32, b: f32) -> (f32, f32, f32) {
+    #[inline]
+    fn comp(c: f32) -> f32 {
+        if c <= fwd::CUTOFF {
+            c * fwd::SLOPE
+        } else {
+            fwd::SCALE * c.powf(1.0 / fwd::GAMMA) - fwd::ALPHA
+        }
+    }
+    (comp(r), comp(g), comp(b))
+}
+
+fn apply_dark_mode_transform(r: f32, g: f32, b: f32) -> (f32, f32, f32) {
+    let luma = W.r.mul_add(r, W.g.mul_add(g, W.b * b));
+    if luma < 0.05 {
+        return (1.0, 1.0, 1.0);
+    }
+
+    let inv_luma = 1.0 - luma;
+    let scale = if luma > 0.0 { inv_luma / luma } else { 1.0 };
+    let r_new = (r * scale).clamp(0.0, 1.0);
+    let g_new = (g * scale).clamp(0.0, 1.0);
+    let b_new = (b * scale).clamp(0.0, 1.0);
+    (r_new, g_new, b_new)
 }
 
 // Tests
@@ -222,5 +297,66 @@ mod tests {
             nits,
             0.0
         );
+    }
+
+    #[test]
+    fn dark_mode_converts_white_background_to_dark() {
+        let data = solid_rgba(255, 255, 255, 255, 16); // White background
+        let dark_data = convert_to_dark_mode(&data);
+        
+        // Check that the first pixel is now dark
+        let dark_pixel = Rgba::from_slice(&dark_data[0..4]);
+        let (rf, gf, bf, _) = dark_pixel.normalized();
+        
+        // Should be dark (low values)
+        assert!(rf < 0.2, "Expected dark red, got {}", rf);
+        assert!(gf < 0.2, "Expected dark green, got {}", gf);
+        assert!(bf < 0.2, "Expected dark blue, got {}", bf);
+    }
+
+    #[test]
+    fn dark_mode_converts_black_text_to_bright() {
+        let data = solid_rgba(0, 0, 0, 255, 16); // Black text
+        let dark_data = convert_to_dark_mode(&data);
+        
+        // Check that the first pixel is now bright
+        let dark_pixel = Rgba::from_slice(&dark_data[0..4]);
+        let (rf, gf, bf, _) = dark_pixel.normalized();
+        
+        // Should be bright (high values)
+        assert!(rf > 0.7, "Expected bright red, got {}", rf);
+        assert!(gf > 0.7, "Expected bright green, got {}", gf);
+        assert!(bf > 0.7, "Expected bright blue, got {}", bf);
+    }
+
+    #[test]
+    fn dark_mode_preserves_alpha() {
+        let data = solid_rgba(128, 128, 128, 100, 16); // Grey with alpha
+        let dark_data = convert_to_dark_mode(&data);
+        
+        // Check that alpha is preserved
+        for i in 0..16 {
+            let original_alpha = data[i * 4 + 3];
+            let converted_alpha = dark_data[i * 4 + 3];
+            assert_eq!(original_alpha, converted_alpha, "Alpha should be preserved");
+        }
+    }
+
+    #[test]
+    fn dark_mode_handles_transparent_pixels() {
+        let data = solid_rgba(255, 255, 255, 0, 16); // Transparent white
+        let dark_data = convert_to_dark_mode(&data);
+        
+        // Transparent pixels should remain unchanged
+        assert_eq!(data, dark_data, "Transparent pixels should remain unchanged");
+    }
+
+    #[test]
+    fn dark_mode_maintains_array_length() {
+        let data = solid_rgba(100, 150, 200, 255, 10);
+        let dark_data = convert_to_dark_mode(&data);
+        
+        assert_eq!(data.len(), dark_data.len(), "Array length should be preserved");
+        assert_eq!(data.len() % 4, 0, "Array should be divisible by 4");
     }
 }
