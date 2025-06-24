@@ -3,7 +3,7 @@ use wasm_bindgen::prelude::*;
 use web_sys::console;
 
 mod constants;
-use constants::{oetf_inv as inv, oetf as fwd, BT_709 as W, L_MAX};
+use constants::{oetf as fwd, oetf_inv as inv, BT_709 as W, L_MAX};
 
 mod pixel;
 use pixel::Rgba;
@@ -94,32 +94,32 @@ fn downscale_to_16(img: &DynamicImage) -> Vec<u8> {
 }
 
 #[wasm_bindgen]
-pub fn convert_to_dark_mode(pixels: &[u8]) -> Vec<u8> {
+pub fn convert_rgba_to_dark_mode(pixels: &[u8]) -> Vec<u8> {
     debug_assert!(pixels.len() % 4 == 0);
-    
+
     let mut result = Vec::with_capacity(pixels.len());
-    
+
     for chunk in pixels.chunks_exact(4) {
         let pixel = Rgba::from_slice(chunk);
         let dark_pixel = convert_pixel_to_dark_mode(&pixel);
         result.extend_from_slice(&[dark_pixel.r, dark_pixel.g, dark_pixel.b, dark_pixel.a]);
     }
-    
+
     result
 }
 
 fn convert_pixel_to_dark_mode(pixel: &Rgba) -> Rgba {
-    let (rf, gf, bf, af) = pixel.normalized();  // 0-1
-    
+    let (rf, gf, bf, af) = pixel.normalized(); // 0-1
+
     // transparent pixels are skipped
     if af < 0.01 {
         return *pixel;
     }
-    
+
     let (r_linear, g_linear, b_linear) = srgb_to_linear(rf, gf, bf);
     let (r_dark, g_dark, b_dark) = apply_dark_mode_transform(r_linear, g_linear, b_linear);
     let (r_srgb, g_srgb, b_srgb) = linear_to_srgb(r_dark, g_dark, b_dark);
-    
+
     Rgba {
         r: (r_srgb * 255.0).round().clamp(0.0, 255.0) as u8,
         g: (g_srgb * 255.0).round().clamp(0.0, 255.0) as u8,
@@ -302,12 +302,12 @@ mod tests {
     #[test]
     fn dark_mode_converts_white_background_to_dark() {
         let data = solid_rgba(255, 255, 255, 255, 16); // White background
-        let dark_data = convert_to_dark_mode(&data);
-        
+        let dark_data = convert_rgba_to_dark_mode(&data);
+
         // Check that the first pixel is now dark
         let dark_pixel = Rgba::from_slice(&dark_data[0..4]);
         let (rf, gf, bf, _) = dark_pixel.normalized();
-        
+
         // Should be dark (low values)
         assert!(rf < 0.2, "Expected dark red, got {}", rf);
         assert!(gf < 0.2, "Expected dark green, got {}", gf);
@@ -317,12 +317,12 @@ mod tests {
     #[test]
     fn dark_mode_converts_black_text_to_bright() {
         let data = solid_rgba(0, 0, 0, 255, 16); // Black text
-        let dark_data = convert_to_dark_mode(&data);
-        
+        let dark_data = convert_rgba_to_dark_mode(&data);
+
         // Check that the first pixel is now bright
         let dark_pixel = Rgba::from_slice(&dark_data[0..4]);
         let (rf, gf, bf, _) = dark_pixel.normalized();
-        
+
         // Should be bright (high values)
         assert!(rf > 0.7, "Expected bright red, got {}", rf);
         assert!(gf > 0.7, "Expected bright green, got {}", gf);
@@ -332,8 +332,8 @@ mod tests {
     #[test]
     fn dark_mode_preserves_alpha() {
         let data = solid_rgba(128, 128, 128, 100, 16); // Grey with alpha
-        let dark_data = convert_to_dark_mode(&data);
-        
+        let dark_data = convert_rgba_to_dark_mode(&data);
+
         // Check that alpha is preserved
         for i in 0..16 {
             let original_alpha = data[i * 4 + 3];
@@ -345,18 +345,25 @@ mod tests {
     #[test]
     fn dark_mode_handles_transparent_pixels() {
         let data = solid_rgba(255, 255, 255, 0, 16); // Transparent white
-        let dark_data = convert_to_dark_mode(&data);
-        
+        let dark_data = convert_rgba_to_dark_mode(&data);
+
         // Transparent pixels should remain unchanged
-        assert_eq!(data, dark_data, "Transparent pixels should remain unchanged");
+        assert_eq!(
+            data, dark_data,
+            "Transparent pixels should remain unchanged"
+        );
     }
 
     #[test]
     fn dark_mode_maintains_array_length() {
         let data = solid_rgba(100, 150, 200, 255, 10);
-        let dark_data = convert_to_dark_mode(&data);
-        
-        assert_eq!(data.len(), dark_data.len(), "Array length should be preserved");
+        let dark_data = convert_rgba_to_dark_mode(&data);
+
+        assert_eq!(
+            data.len(),
+            dark_data.len(),
+            "Array length should be preserved"
+        );
         assert_eq!(data.len() % 4, 0, "Array should be divisible by 4");
     }
 }

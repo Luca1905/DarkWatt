@@ -105,6 +105,9 @@ DarkWatt is released under the MIT License – see the [LICENSE](LICENSE) file f
   - [x] create a dxdb in background
   - [x] set up message connections to get and save luma data
   - [ ] implement savings logic
+    - [x] heuristic function for light mode page into dark mode page
+    - [x] heuristic function for detecting light e.g. dark mode page
+    - [ ] calculating energy saving from nits saved.
 - [ ] get CPU usage data
 - [x] store data in dxdb, expose to popup
 

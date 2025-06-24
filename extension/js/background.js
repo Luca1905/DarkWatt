@@ -2,6 +2,7 @@ import initWasmModule, {
   hello_wasm,
   average_luma_in_nits,
   average_luma_in_nits_from_data_uri,
+  convert_rgba_to_dark_mode,
 } from './wasm/wasm_mod.js';
 
 const DB_NAME = 'darkWatt-storage';
@@ -9,6 +10,9 @@ const DB_VERSION = 1;
 
 let latestSample = null;
 const SAMPLE_INTERVAL = 1000;
+
+let currentPageMode = 'unknown';
+let currentSaving = 0;
 
 function openDatabase() {
   return new Promise((resolve, reject) => {
@@ -221,6 +225,7 @@ async function broadcastStats() {
         currentLuminance: latestSample?.luminance ?? null,
         totalTrackedSites: await getTotalTrackedSites(),
         cpuUsage: null,
+        potentialSaving: currentSaving,
       },
     });
   } catch (err) {
@@ -340,6 +345,30 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return true;
     }
 
+    case 'page_mode_detected': {
+      currentPageMode = request.mode || 'unknown';
+
+      if (currentPageMode === 'light') {
+        captureScreenshot()
+          .then((dataUrl) => calculateSavingsFromDataUrl(dataUrl))
+          .then(({ saving }) => {
+            currentSaving = saving;
+            broadcastStats();
+          })
+          .catch((err) => {
+            console.error('[DarkWatt] error calculating savings:', err);
+            currentSaving = 0;
+          })
+          .finally(() => sendResponse({ status: 'ok' }));
+        return true; // keep port open for async
+      } else {
+        currentSaving = 0;
+        broadcastStats();
+        sendResponse({ status: 'ok' });
+        return false;
+      }
+    }
+
     default:
       sendResponse(null);
       return false;
@@ -366,6 +395,7 @@ chrome.processes.onUpdated.addListener(async (processes) => {
         currentLuminance: latestSample?.luminance ?? null,
         totalTrackedSites: await getTotalTrackedSites(),
         cpuUsage: activeProcess.cpu,
+        potentialSaving: currentSaving,
       },
     });
     console.log(
@@ -380,5 +410,31 @@ chrome.processes.onUpdated.addListener(async (processes) => {
     return;
   }
 });
+
+async function calculateSavingsFromDataUrl(dataUrl) {
+  try {
+    const blob = await (await fetch(dataUrl)).blob();
+    const bitmap = await createImageBitmap(blob);
+
+    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(bitmap, 0, 0);
+    const { data } = ctx.getImageData(0, 0, bitmap.width, bitmap.height);
+
+    const pixels = new Uint8Array(data.buffer);
+
+    const originalNits = average_luma_in_nits(pixels);
+
+    const darkPixels = convert_rgba_to_dark_mode(pixels);
+    const darkNits = average_luma_in_nits(darkPixels);
+
+    const saving = Math.max(0, originalNits - darkNits);
+
+    return { saving, originalNits, darkNits };
+  } catch (err) {
+    console.error('[DarkWatt] Failed to calculate savings:', err);
+    return { saving: 0 };
+  }
+}
 
 main();

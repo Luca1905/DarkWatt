@@ -134,6 +134,23 @@ export function average_luma_in_nits_from_data_uri(uri) {
     return ret;
 }
 
+function getArrayU8FromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    return getUint8ArrayMemory0().subarray(ptr / 1, ptr / 1 + len);
+}
+/**
+ * @param {Uint8Array} pixels
+ * @returns {Uint8Array}
+ */
+export function convert_rgba_to_dark_mode(pixels) {
+    const ptr0 = passArray8ToWasm0(pixels, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.convert_rgba_to_dark_mode(ptr0, len0);
+    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v2;
+}
+
 /**
  * Chroma subsampling format
  * @enum {0 | 1 | 2 | 3}

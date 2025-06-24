@@ -6,6 +6,7 @@ const appState = {
   todaySavings: null,
   weekSavings: null,
   totalSavings: null,
+  potentialSaving: null,
 };
 
 const stateSubscribers = new Set();
@@ -64,6 +65,14 @@ function renderStats(applicationState) {
     totalSavingsElement.textContent = `${applicationState.totalSavings.toFixed(
       1
     )} mWh`;
+  }
+
+  const potentialElement = getElementById('potential-saving');
+  if (potentialElement) {
+    potentialElement.textContent =
+      typeof applicationState.potentialSaving == 'number'
+        ? `${applicationState.potentialSaving.toFixed(2)} nits`
+        : '--';
   }
 }
 
