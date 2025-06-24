@@ -108,9 +108,9 @@ DarkWatt is released under the MIT License – see the [LICENSE](LICENSE) file f
 - [ ] get CPU usage data
 - [x] store data in dxdb, expose to popup
 
-- [ ] remove annoying errors on installation
-  - [ ] error when on chrome://
-  - [ ] exceeding MAX_CAPTURE_VISIBLE_TAB_CALLS_PER_SECOND
+- [x] remove annoying errors on installation
+  - [x] error when on chrome://
+  - [x] exceeding MAX_CAPTURE_VISIBLE_TAB_CALLS_PER_SECOND
 ### Popup:
 - [x] get data from background
 - [x] render data in UI
