@@ -40,3 +40,15 @@ pub mod oetf {
     pub const SCALE: f32 = 1.055;
     pub const GAMMA: f32 = 2.4;
 }
+
+pub const DOWNSCALE_SIZE: u32 = 16;
+
+pub const PIXEL_COMPONENTS: usize = 4;
+
+pub const ALPHA_TRANSPARENT_THRESHOLD: f32 = 0.01;
+
+pub const LUMA_BLACK_THRESHOLD: f32 = 0.05;
+
+pub const EFFICACY_LCD_LM_PER_W: f32 = 90.0;
+
+pub const EFFICACY_OLED_LM_PER_W: f32 = 25.0;

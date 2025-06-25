@@ -9,3 +9,12 @@ pub fn set_panic_hook() {
     #[cfg(feature = "console_error_panic_hook")]
     console_error_panic_hook::set_once();
 }
+
+pub fn inch_to_meter(n: f32) -> f32 {
+    n * 0.0254
+}
+
+#[allow(dead_code)]
+pub fn meter_to_inch(n: f32) -> f32 {
+    n * 39.3700787402
+}

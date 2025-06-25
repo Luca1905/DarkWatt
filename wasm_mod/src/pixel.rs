@@ -1,3 +1,5 @@
+use wasm_bindgen::prelude::*;
+
 #[derive(Copy, Clone)]
 pub(crate) struct Rgba {
     pub(crate) r: u8,
@@ -25,4 +27,10 @@ impl Rgba {
             self.a as f32 / 255.0,
         )
     }
+}
+
+#[wasm_bindgen]
+pub enum DisplayTech {
+    LCD,
+    OLED,
 }

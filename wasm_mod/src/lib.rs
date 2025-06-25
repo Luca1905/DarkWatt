@@ -3,7 +3,10 @@ use wasm_bindgen::prelude::*;
 use web_sys::console;
 
 mod constants;
-use constants::{oetf as fwd, oetf_inv as inv, BT_709 as W, L_MAX};
+use constants::{
+    oetf as fwd, oetf_inv as inv, ALPHA_TRANSPARENT_THRESHOLD, BT_709 as W, DOWNSCALE_SIZE,
+    EFFICACY_LCD_LM_PER_W, EFFICACY_OLED_LM_PER_W, LUMA_BLACK_THRESHOLD, L_MAX,
+};
 
 mod pixel;
 use pixel::Rgba;
@@ -11,14 +14,18 @@ use pixel::Rgba;
 use data_url::DataUrl;
 use image::{imageops::FilterType, DynamicImage};
 
+use std::f32::consts::PI;
+
+use crate::{pixel::DisplayTech, utils::inch_to_meter};
+
 #[wasm_bindgen]
 pub fn hello_wasm() {
-    console::log_1(&"[WASM] LOADING COMPLETE".into());
+    log("[WASM] LOADING COMPLETE");
 }
 
 #[wasm_bindgen]
 pub fn average_luma_relative(pixels: &[u8]) -> f32 {
-    debug_assert!(pixels.len() % 4 == 0);
+    debug_assert!(pixels.len() % constants::PIXEL_COMPONENTS == 0);
 
     let mut sum_luma = 0.0_f32;
     let mut sum_weight = 0.0_f32;
@@ -60,7 +67,7 @@ pub fn average_luma_in_nits_from_data_uri(uri: &str) -> f32 {
     match process_data_uri(uri) {
         Ok(nits) => nits,
         Err(err) => {
-            console::log_1(&format!("[WASM] failed to process data URI: {}", err).into());
+            log(&format!("[WASM] failed to process data URI: {}", err));
             0.0
         }
     }
@@ -74,7 +81,7 @@ fn process_data_uri(uri: &str) -> Result<f32, String> {
     let img = image::load_from_memory(&bytes).map_err(|e| format!("image decode error: {}", e))?;
 
     // 3. Downscale
-    let small = downscale_to_16(&img);
+    let small = downscale_to_size(&img, DOWNSCALE_SIZE);
 
     Ok(average_luma_in_nits(&small))
 }
@@ -88,14 +95,14 @@ fn decode_data_uri(uri: &str) -> Result<Vec<u8>, String> {
     Ok(bytes)
 }
 
-fn downscale_to_16(img: &DynamicImage) -> Vec<u8> {
-    let resized: DynamicImage = img.resize_exact(16, 16, FilterType::Triangle);
+fn downscale_to_size(img: &DynamicImage, size: u32) -> Vec<u8> {
+    let resized: DynamicImage = img.resize_exact(size, size, FilterType::Triangle);
     resized.to_rgba8().into_raw()
 }
 
 #[wasm_bindgen]
 pub fn convert_rgba_to_dark_mode(pixels: &[u8]) -> Vec<u8> {
-    debug_assert!(pixels.len() % 4 == 0);
+    debug_assert!(pixels.len() % constants::PIXEL_COMPONENTS == 0);
 
     let mut result = Vec::with_capacity(pixels.len());
 
@@ -112,7 +119,7 @@ fn convert_pixel_to_dark_mode(pixel: &Rgba) -> Rgba {
     let (rf, gf, bf, af) = pixel.normalized(); // 0-1
 
     // transparent pixels are skipped
-    if af < 0.01 {
+    if af < ALPHA_TRANSPARENT_THRESHOLD {
         return *pixel;
     }
 
@@ -156,7 +163,7 @@ fn linear_to_srgb(r: f32, g: f32, b: f32) -> (f32, f32, f32) {
 
 fn apply_dark_mode_transform(r: f32, g: f32, b: f32) -> (f32, f32, f32) {
     let luma = W.r.mul_add(r, W.g.mul_add(g, W.b * b));
-    if luma < 0.05 {
+    if luma < LUMA_BLACK_THRESHOLD {
         return (1.0, 1.0, 1.0);
     }
 
@@ -334,7 +341,6 @@ mod tests {
         let data = solid_rgba(128, 128, 128, 100, 16); // Grey with alpha
         let dark_data = convert_rgba_to_dark_mode(&data);
 
-        // Check that alpha is preserved
         for i in 0..16 {
             let original_alpha = data[i * 4 + 3];
             let converted_alpha = dark_data[i * 4 + 3];
@@ -347,7 +353,6 @@ mod tests {
         let data = solid_rgba(255, 255, 255, 0, 16); // Transparent white
         let dark_data = convert_rgba_to_dark_mode(&data);
 
-        // Transparent pixels should remain unchanged
         assert_eq!(
             data, dark_data,
             "Transparent pixels should remain unchanged"
@@ -365,5 +370,66 @@ mod tests {
             "Array length should be preserved"
         );
         assert_eq!(data.len() % 4, 0, "Array should be divisible by 4");
+    }
+
+    #[test]
+    fn inch_meter_roundtrip() {
+        use crate::utils::{inch_to_meter, meter_to_inch};
+
+        let inch_val = 13.37_f32;
+        let meter_val = inch_to_meter(inch_val);
+        let inch_back = meter_to_inch(meter_val);
+
+        assert!(
+            (inch_back - inch_val).abs() < 1e-4,
+            "Inch->Meter->Inch round-trip failed"
+        );
+    }
+
+    #[test]
+    fn efficacy_constants_are_positive() {
+        use crate::constants::{EFFICACY_LCD_LM_PER_W, EFFICACY_OLED_LM_PER_W};
+
+        assert!(EFFICACY_LCD_LM_PER_W > 0.0);
+        assert!(EFFICACY_OLED_LM_PER_W > 0.0);
+    }
+
+    #[test]
+    fn decode_data_uri_handles_errors() {
+        let bad_uri = "invalid_uri";
+        let res = super::decode_data_uri(bad_uri);
+        assert!(res.is_err(), "Expected error for invalid data URI");
+    }
+
+    #[test]
+    fn decode_data_uri_success() {
+        // 1×1 black PNG
+        let data_uri = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+        let res = super::decode_data_uri(data_uri);
+        assert!(res.is_ok(), "Expected successful decode of valid data URI");
+    }
+
+    #[test]
+    fn downscale_size_matches_expected() {
+        use crate::constants::DOWNSCALE_SIZE;
+        let data_uri = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+        let img_bytes = super::decode_data_uri(data_uri).unwrap();
+        let img = image::load_from_memory(&img_bytes).unwrap();
+        let scaled = super::downscale_to_size(&img, DOWNSCALE_SIZE);
+        assert_eq!(scaled.len(), (DOWNSCALE_SIZE * DOWNSCALE_SIZE * 4) as usize);
+    }
+
+}
+
+#[inline]
+fn log(message: &str) {
+    #[cfg(target_arch = "wasm32")]
+    {
+        console::log_1(&message.into());
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        println!("{}", message);
     }
 }
