@@ -246,8 +246,7 @@ async function sampleLoop() {
       await saveLuminanceData(response.sample, response.url);
       await broadcastStats();
       console.log(
-        `[SAMPLE - ${new Date().toISOString()}] saved sample ${
-          response.sample
+        `[SAMPLE - ${new Date().toISOString()}] saved sample ${response.sample
         } for ${response.url} `
       );
     }
@@ -367,6 +366,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse({ status: 'ok' });
         return false;
       }
+    }
+
+    case 'display_info_update': {
+      const { displayInfo } = request;
+      console.log('[DISPLAY INFO] received display info:', displayInfo);
+      sendResponse({ status: 'ok' });
+      return false;
     }
 
     default:

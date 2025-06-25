@@ -108,6 +108,7 @@ DarkWatt is released under the MIT License – see the [LICENSE](LICENSE) file f
     - [x] heuristic function for light mode page into dark mode page
     - [x] heuristic function for detecting light e.g. dark mode page
     - [ ] calculating energy saving from nits saved.
+    - [x] get display size for energy calculation
 - [ ] get CPU usage data
 - [x] store data in dxdb, expose to popup
 
@@ -127,4 +128,7 @@ DarkWatt is released under the MIT License – see the [LICENSE](LICENSE) file f
 - [ ] firefox integration
 - [ ] deploy
 
+
+- [ ] fix assumptions
+  - [ ] assumed screen max brightness
 

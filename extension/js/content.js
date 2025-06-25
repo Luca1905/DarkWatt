@@ -58,18 +58,37 @@
     return 'light';
   }
 
-  function notifyBackground(mode) {
+  function sendBackgroundMessage(action, payload = {}) {
     try {
-      chrome.runtime.sendMessage({ action: 'page_mode_detected', mode });
+      chrome.runtime.sendMessage({ action, ...payload });
     } catch (err) {
-      console.warn('[SCRIPT] Unable to send page mode message:', err);
+      console.warn('[SCRIPT] Unable to send background message:', err);
     }
   }
+
+  function sendDisplayInfo() {
+    if (!chrome.system || !chrome.system.display || !chrome.system.display.getInfo) {
+      console.warn('[SCRIPT] system.display API not available');
+      return; 
+    }
+
+    chrome.system.display
+      .getInfo()
+      .then((displayInfo) => {
+        sendBackgroundMessage('display_info_update', { displayInfo });
+      })
+      .catch((err) => {
+        console.warn('[SCRIPT] Unable to get display info:', err);
+      });
+  }
+
+  chrome.system.display.onDisplayChanged.addListener(sendDisplayInfo);
 
   function init() {
     const mode = detectPageMode();
     console.log(`[SCRIPT] Detected page mode: ${mode}`);
-    notifyBackground(mode);
+    sendBackgroundMessage('page_mode_detected', { mode });
+    sendDisplayInfo();
   }
 
   if (

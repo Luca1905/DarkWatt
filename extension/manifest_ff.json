@@ -34,7 +34,8 @@
   "permissions": [
       "webRequest",
       "tabs",
-      "processes"
+      "processes",
+      "system.display"
   ],
   "host_permissions": [
       "<all_urls>"
