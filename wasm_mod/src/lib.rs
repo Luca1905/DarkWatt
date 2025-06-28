@@ -16,10 +16,11 @@ use image::{imageops::FilterType, DynamicImage};
 
 use std::f32::consts::PI;
 
-use crate::{pixel::DisplayTech, utils::inch_to_meter};
+use crate::{pixel::DisplayTech, utils::inch_to_meter, utils::set_panic_hook};
 
 #[wasm_bindgen]
 pub fn hello_wasm() {
+    set_panic_hook();
     log("[WASM] LOADING COMPLETE");
 }
 
@@ -74,16 +75,15 @@ pub fn average_luma_in_nits_from_data_uri(uri: &str) -> f32 {
 }
 
 fn process_data_uri(uri: &str) -> Result<f32, String> {
-    // 1. Decode the data URI to bytes
+    let pixels = pixels_from_data_uri(uri)?;
+    Ok(average_luma_in_nits(&pixels))
+}
+
+fn pixels_from_data_uri(uri: &str) -> Result<Vec<u8>, String> {
     let bytes = decode_data_uri(uri)?;
-
-    // 2. Decode to rgba values
-    let img = image::load_from_memory(&bytes).map_err(|e| format!("image decode error: {}", e))?;
-
-    // 3. Downscale
-    let small = downscale_to_size(&img, DOWNSCALE_SIZE);
-
-    Ok(average_luma_in_nits(&small))
+    let img = image::load_from_memory(&bytes)
+        .map_err(|e| format!("image decode error: {}", e))?;
+    Ok(downscale_to_size(&img, DOWNSCALE_SIZE))
 }
 
 fn decode_data_uri(uri: &str) -> Result<Vec<u8>, String> {
@@ -131,18 +131,12 @@ pub fn estimate_saved_energy_mwh_from_data_uri(
 }
 
 fn estimate_saved_nits_from_data_uri(uri: &str) -> f32 {
-    let result = (|| {
-        let bytes = decode_data_uri(uri).map_err(|e| e.to_string())?;
-        let img = image::load_from_memory(&bytes).map_err(|e| e.to_string())?;
-        let small = downscale_to_size(&img, DOWNSCALE_SIZE);
-
+    match pixels_from_data_uri(uri).map(|small| {
         let nits = average_luma_in_nits(&small);
         let dark_pixels = convert_rgba_to_dark_mode(&small);
         let dark_nits = average_luma_in_nits(&dark_pixels);
-        Ok::<f32, String>((nits - dark_nits).max(0.0))
-    })();
-
-    match result {
+        (nits - dark_nits).max(0.0)
+    }) {
         Ok(v) => v,
         Err(err) => {
             log(&format!("[WASM] failed to estimate saved nits: {}", err));
