@@ -60,17 +60,16 @@ async function sampleActiveTab() {
   }
 }
 
-async function broadcastStats(stats) {
+async function broadcastStats(partialStats = {}) {
   try {
     await chrome.runtime.sendMessage({
       action: 'stats_update',
-      stats,
+      stats: partialStats,
     });
   } catch (err) {
     warn('STATS', `${new Date().toISOString()} skipped stats update:`, {
       message: err,
     });
-    return;
   }
 }
 
@@ -98,14 +97,15 @@ function updateSavings(dataUrl) {
   const { width, height } = displayDimensions;
   const hours = 1;
   const tech = DisplayTech.LCD;
-  const saving = estimate_saved_energy_mwh_from_data_uri(
-    width,
-    height,
+
+  const savingMWh = estimate_saved_energy_mwh_from_data_uri(
+    Math.round(width),
+    Math.round(height),
     hours,
     tech,
     dataUrl
   );
-  broadcastStats({ potentialSaving: saving });
+  broadcastStats({ potentialSavingMWh: savingMWh });
 }
 
 async function main() {
@@ -210,7 +210,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           .finally(() => sendResponse({ status: 'ok' }));
         return true;
       } else {
-        broadcastStats();
         sendResponse({ status: 'ok' });
         return false;
       }
@@ -231,21 +230,16 @@ chrome.processes.onUpdated.addListener(async (processes) => {
     });
     if (!currentTab) return;
 
-    let activeProcessId = await chrome.processes.getProcessIdForTab(
+    const activeProcessId = await chrome.processes.getProcessIdForTab(
       currentTab.id
     );
-    let activeProcess = processes[activeProcessId];
+    const activeProcess = processes[activeProcessId];
 
-    chrome.runtime
-      .sendMessage({
-        action: 'stats_update',
-        stats: { cpuUsage: activeProcess.cpu },
-      })
-      .catch((err) => {
-        warn('STATS', 'Error sending stats update:', err);
-      });
+    if (activeProcess && typeof activeProcess.cpu === 'number') {
+      await broadcastStats({ cpuUsage: activeProcess.cpu });
+    }
   } catch (err) {
-    return;
+    warn('STATS', 'Error sending stats update:', err);
   }
 });
 

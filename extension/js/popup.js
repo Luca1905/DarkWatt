@@ -7,7 +7,8 @@ const appState = {
   todaySavings: null,
   weekSavings: null,
   totalSavings: null,
-  potentialSaving: null,
+  potentialSavingMWh: null,
+  cpuUsage: null,
   displayInfo: null,
 };
 
@@ -72,9 +73,17 @@ function renderStats(applicationState) {
   const potentialElement = getElementById('potential-saving');
   if (potentialElement) {
     potentialElement.textContent =
-      typeof applicationState.potentialSaving == 'number'
-        ? `${applicationState.potentialSaving.toFixed(2)} nits`
-        : '--';
+      typeof applicationState.potentialSavingMWh == 'number'
+        ? `${applicationState.potentialSavingMWh.toFixed(1)} mWh`
+        : '-- mWh';
+  }
+
+  const cpuElement = getElementById('cpu-usage');
+  if (cpuElement) {
+    cpuElement.textContent =
+      typeof applicationState.cpuUsage == 'number'
+        ? `${applicationState.cpuUsage.toFixed(1)} %`
+        : '-- %';
   }
 }
 

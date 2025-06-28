@@ -1,8 +1,12 @@
 const DB_NAME = 'darkWatt-storage';
 const DB_VERSION = 1;
 
+let _dbPromise = null;
+
 function openDatabase() {
-  return new Promise((resolve, reject) => {
+  if (_dbPromise) return _dbPromise;
+
+  _dbPromise = new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onerror = () => reject(request.error);
@@ -18,6 +22,8 @@ function openDatabase() {
 
     request.onsuccess = () => resolve(request.result);
   });
+
+  return _dbPromise;
 }
 
 const QUERIES = {
@@ -59,7 +65,10 @@ const QUERIES = {
     const db = await openDatabase();
     return new Promise((resolve, reject) => {
       const weekData = [];
-      const keyRange = IDBKeyRange.bound(startDate, endDate);
+      const keyRange = IDBKeyRange.bound(
+        startDate.toISOString(),
+        endDate.toISOString()
+      );
 
       const tx = db.transaction(DB_NAME, 'readonly');
       tx.onerror = () => reject(tx.error);
@@ -91,7 +100,10 @@ const QUERIES = {
 
     return new Promise((resolve, reject) => {
       const dayData = [];
-      const keyRange = IDBKeyRange.bound(dayBeginning, dayEnding);
+      const keyRange = IDBKeyRange.bound(
+        dayBeginning.toISOString(),
+        dayEnding.toISOString()
+      );
 
       const tx = db.transaction(DB_NAME, 'readonly');
       tx.onerror = () => reject(tx.error);
