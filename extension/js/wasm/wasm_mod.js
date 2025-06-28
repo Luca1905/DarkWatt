@@ -134,6 +134,27 @@ export function average_luma_in_nits_from_data_uri(uri) {
     return ret;
 }
 
+function _assertNum(n) {
+    if (typeof(n) !== 'number') throw new Error(`expected a number argument, found ${typeof(n)}`);
+}
+/**
+ * @param {number} display_width
+ * @param {number} display_height
+ * @param {number} hours
+ * @param {DisplayTech} tech
+ * @param {string} uri
+ * @returns {number}
+ */
+export function estimate_saved_energy_mwh_from_data_uri(display_width, display_height, hours, tech, uri) {
+    _assertNum(display_width);
+    _assertNum(display_height);
+    _assertNum(tech);
+    const ptr0 = passStringToWasm0(uri, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.estimate_saved_energy_mwh_from_data_uri(display_width, display_height, hours, tech, ptr0, len0);
+    return ret >>> 0;
+}
+
 function getArrayU8FromWasm0(ptr, len) {
     ptr = ptr >>> 0;
     return getUint8ArrayMemory0().subarray(ptr / 1, ptr / 1 + len);
@@ -172,6 +193,13 @@ export const ChromaSampling = Object.freeze({
      * Monochrome.
      */
     Cs400: 3, "3": "Cs400",
+});
+/**
+ * @enum {0 | 1}
+ */
+export const DisplayTech = Object.freeze({
+    LCD: 0, "0": "LCD",
+    OLED: 1, "1": "OLED",
 });
 
 async function __wbg_load(module, imports) {
