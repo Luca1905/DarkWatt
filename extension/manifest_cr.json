@@ -46,6 +46,7 @@
               "<all_urls>"
           ],
           "resources": [
+              "js/utils/logger.js",
               "js/wasm/wasm_mod.js",
               "js/wasm/wasm_mod_bg.wasm"
           ]

@@ -1,4 +1,5 @@
-console.log('[UI] popup loaded');
+import { log, error } from './utils/logger.js';
+log('UI', 'popup loaded');
 
 const appState = {
   currentLuminance: null,
@@ -86,7 +87,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (typeof nits === 'number') updateState({ currentLuminance: nits });
     if (typeof sites === 'number') updateState({ totalTrackedSites: sites });
   } catch (err) {
-    console.error(err);
+    error('UI', 'popup init error:', err);
   }
   subscribeToState(renderStats);
 });
@@ -117,10 +118,7 @@ async function getCurrentLuminanceData() {
       },
       (response) => {
         if (chrome.runtime.lastError) {
-          console.error(
-            'Error getting current luminance data:',
-            chrome.runtime.lastError
-          );
+          error('UI', 'Error getting current luminance data:', chrome.runtime.lastError);
           reject(chrome.runtime.lastError);
         } else {
           resolve(response);
@@ -138,10 +136,7 @@ async function getTotalTrackedSites() {
       },
       (response) => {
         if (chrome.runtime.lastError) {
-          console.error(
-            'Error getting total tracked sites:',
-            chrome.runtime.lastError
-          );
+          error('UI', 'Error getting total tracked sites:', chrome.runtime.lastError);
           reject(chrome.runtime.lastError);
         } else {
           resolve(response);
@@ -161,10 +156,7 @@ async function getLuminanceAverageForDateRange(startDate, endDate) {
       },
       (response) => {
         if (chrome.runtime.lastError) {
-          console.error(
-            'Error getting luminance data for date range:',
-            chrome.runtime.lastError
-          );
+          error('UI', 'Error getting luminance data for date range:', chrome.runtime.lastError);
           reject(chrome.runtime.lastError);
         } else {
           resolve(response);

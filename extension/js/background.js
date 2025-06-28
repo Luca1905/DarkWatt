@@ -8,6 +8,7 @@ import initWasmModule, {
 
 const DB_NAME = 'darkWatt-storage';
 const DB_VERSION = 1;
+import { log, warn, error } from './utils/logger.js';
 
 let latestSample = null;
 const SAMPLE_INTERVAL = 1000;
@@ -211,7 +212,11 @@ async function sampleActiveTab() {
       url: tab.url,
     };
   } catch (err) {
-    console.log(`[SAMPLE - ${new Date().toISOString()}] skipped sample:`, err.toString());
+    warn(
+      'SAMPLE',
+      `${new Date().toISOString()} skipped sample:`,
+      err.toString()
+    );
     return null;
   }
 }
@@ -223,10 +228,9 @@ async function broadcastStats(stats) {
       stats,
     });
   } catch (err) {
-    console.log(
-      `[STATS  - ${new Date().toISOString()}] skipped stats update:`,
-      { message: err }
-    );
+    warn('STATS', `${new Date().toISOString()} skipped stats update:`, {
+      message: err,
+    });
     return;
   }
 }
@@ -253,6 +257,7 @@ async function sampleLoop() {
       `[SAMPLE - ${new Date().toISOString()}] Sample loop error:`,
       err
     );
+    error('SAMPLE', `${new Date().toISOString()} Sample loop error:`, err);
   }
   const elapsed = performance.now() - t0;
   setTimeout(sampleLoop, Math.max(0, SAMPLE_INTERVAL - elapsed));
@@ -293,7 +298,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const result = average_luma(data);
         sendResponse(result);
       } catch (err) {
-        console.error('Error computing luma:', err);
+        error('LUMA', 'Error computing luma:', err);
         sendResponse(null);
       }
       return false;
@@ -304,7 +309,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const result = average_luma_in_nits(data);
         sendResponse(result);
       } catch (err) {
-        console.error('Error computing luma:', err);
+        error('LUMA', 'Error computing luma:', err);
         sendResponse(null);
       }
       return false;
@@ -314,7 +319,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       getLatestLuminanceData()
         .then((data) => sendResponse(data))
         .catch((err) => {
-          console.error('Error fetching luminance data:', err);
+          error('DB', 'Error fetching luminance data:', err);
           sendResponse(null);
         });
       return true;
@@ -324,7 +329,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       getAllLuminanceData()
         .then((data) => sendResponse(data))
         .catch((err) => {
-          console.error('Error fetching luminance data:', err);
+          error('DB', 'Error fetching luminance data:', err);
           sendResponse(null);
         });
       return true;
@@ -334,7 +339,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       getLuminanceDataForDate(request.date)
         .then((data) => sendResponse(data))
         .catch((err) => {
-          console.error('Error fetching luminance data:', err);
+          error('DB', 'Error fetching luminance data:', err);
           sendResponse(null);
         });
       return true;
@@ -344,7 +349,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       getLuminanceAverageForDateRange(request.startDate, request.endDate)
         .then((data) => sendResponse(data))
         .catch((err) => {
-          console.error('Error fetching luminance data:', err);
+          error('DB', 'Error fetching luminance data:', err);
           sendResponse(null);
         });
       return true;
@@ -354,7 +359,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       getTotalTrackedSites()
         .then((data) => sendResponse(data))
         .catch((err) => {
-          console.error('Error fetching luminance data:', err);
+          error('DB', 'Error fetching luminance data:', err);
           sendResponse(null);
         });
       return true;
@@ -367,8 +372,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         captureScreenshot()
           .then((dataUrl) => updateSavings(dataUrl))
           .catch((err) => {
-            console.error('[DarkWatt] error calculating savings:', err);
-            currentSaving = 0;
+            error('DARKWATT', 'error calculating savings:', err);
           })
           .finally(() => sendResponse({ status: 'ok' }));
         return true;
@@ -399,19 +403,15 @@ chrome.processes.onUpdated.addListener(async (processes) => {
     );
     let activeProcess = processes[activeProcessId];
 
-    const response = await chrome.runtime.sendMessage({
-      action: 'stats_update',
-      stats: { cpuUsage: activeProcess.cpu },
-    });
-    console.log(
-      `[STATS  - ${new Date().toISOString()}] updated stats: `,
-      response
-    );
+    chrome.runtime
+      .sendMessage({
+        action: 'stats_update',
+        stats: { cpuUsage: activeProcess.cpu },
+      })
+      .catch((err) => {
+        warn('STATS', 'Error sending stats update:', err);
+      });
   } catch (err) {
-    console.log(
-      `[STATS  - ${new Date().toISOString()}] skipped stats update:`,
-      { message: err }
-    );
     return;
   }
 });
@@ -433,12 +433,12 @@ async function refreshDisplayInfo() {
   try {
     const displays = await chrome.system.display.getInfo();
     const primaryDisplay = displays.find((d) => d.isPrimary) || displays[0];
-    console.log('[DISPLAY INFO] primaryDisplay:', primaryDisplay);
+    log('DISPLAY', 'primaryDisplay:', primaryDisplay);
     displayDimensions = displayLengthsFromInfo(primaryDisplay);
-    console.log('[DISPLAY INFO] displayDimensions:', displayDimensions);
+    log('DISPLAY', 'displayDimensions:', displayDimensions);
     broadcastStats({ displayInfo: displayDimensions });
   } catch (err) {
-    console.error('[DISPLAY INFO] Failed to fetch:', err);
+    error('DISPLAY', 'Failed to fetch:', err);
   }
 }
 
