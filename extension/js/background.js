@@ -1,182 +1,20 @@
 import initWasmModule, {
   hello_wasm,
+  average_luma_relative,
   average_luma_in_nits,
   average_luma_in_nits_from_data_uri,
   estimate_saved_energy_mwh_from_data_uri,
   DisplayTech,
 } from './wasm/wasm_mod.js';
 
-const DB_NAME = 'darkWatt-storage';
-const DB_VERSION = 1;
+import db from './storage.js';
+
 import { log, warn, error } from './utils/logger.js';
 
-let latestSample = null;
 const SAMPLE_INTERVAL = 1000;
 
 let currentPageMode = 'unknown';
 let displayDimensions = { width: 0, height: 0 };
-
-function openDatabase() {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-    request.onerror = () => reject(request.error);
-
-    request.onupgradeneeded = (event) => {
-      const db = event.target.result;
-      if (!db.objectStoreNames.contains(DB_NAME)) {
-        const store = db.createObjectStore(DB_NAME, { keyPath: 'date' });
-        store.createIndex('date', 'date', { unique: true });
-        store.createIndex('url', 'url', { unique: false });
-      }
-    };
-
-    request.onsuccess = () => resolve(request.result);
-  });
-}
-
-async function saveLuminanceData(nits, url) {
-  const db = await openDatabase();
-
-  latestSample = {
-    luminance: nits,
-    url: url,
-    date: new Date().toISOString(),
-  };
-
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(DB_NAME, 'readwrite');
-
-    tx.onerror = () => reject(tx.error);
-    tx.oncomplete = () => resolve();
-
-    const store = tx.objectStore(DB_NAME);
-    store.add(latestSample);
-  });
-}
-
-async function getLatestLuminanceData() {
-  const db = await openDatabase();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(DB_NAME, 'readonly');
-    tx.onerror = () => reject(tx.error);
-
-    const store = tx.objectStore(DB_NAME);
-    const request = store.openCursor(null, 'prev');
-
-    request.onerror = () => reject(request.error);
-    request.onsuccess = (event) => {
-      const cursor = event.target.result;
-      resolve(cursor ? cursor.value : null);
-    };
-  });
-}
-
-async function getLuminanceAverageForDateRange(startDate, endDate) {
-  const db = await openDatabase();
-  return new Promise((resolve, reject) => {
-    const weekData = [];
-    const keyRange = IDBKeyRange.bound(startDate, endDate);
-
-    const tx = db.transaction(DB_NAME, 'readonly');
-    tx.onerror = () => reject(tx.error);
-
-    const store = tx.objectStore(DB_NAME);
-
-    store.openCursor(keyRange).onsuccess = (event) => {
-      const cursor = event.target.result;
-      if (cursor) {
-        weekData.push(cursor.value);
-        cursor.continue();
-      } else {
-        console.log(
-          `Collected data for range: ${startDate} to ${endDate}, ${weekData.length} samples`
-        );
-        const averageLuminance =
-          weekData.reduce((acc, curr) => acc + curr.luminance, 0) /
-          weekData.length;
-        resolve(averageLuminance);
-      }
-    };
-  });
-}
-
-async function getAllLuminanceData() {
-  const db = await openDatabase();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(DB_NAME, 'readonly');
-    tx.onerror = () => reject(tx.error);
-
-    const store = tx.objectStore(DB_NAME);
-
-    const request = store.getAll();
-
-    request.onerror = () => reject(request.error);
-    request.onsuccess = (event) => {
-      resolve(event.target.result.value);
-    };
-  });
-}
-
-async function getLuminanceDataForDate(date) {
-  const dayBeginning = new Date(date);
-  dayBeginning.setHours(0, 0, 0, 0);
-  const dayEnding = new Date(date);
-  dayEnding.setHours(0, 0, 0, 0);
-
-  const db = await openDatabase();
-
-  return new Promise((resolve, reject) => {
-    const dayData = [];
-    const keyRange = IDBKeyRange.bound(dayBeginning, dayEnding);
-
-    const tx = db.transaction(DB_NAME, 'readonly');
-    tx.onerror = () => reject(tx.error);
-
-    const store = tx.objectStore(DB_NAME);
-
-    store.openCursor(keyRange).onsuccess = (event) => {
-      const cursor = event.target.result;
-      if (cursor) {
-        dayData.push(cursor.value);
-        cursor.continue();
-      } else {
-        console.log(
-          `Collected data for range: ${startDate} to ${endDate}, ${dayData.length} samples`
-        );
-        const averageLuminance =
-          dayData.reduce((acc, curr) => acc + curr.luminance, 0) /
-          dayData.length;
-        resolve(averageLuminance);
-      }
-    };
-  });
-}
-
-async function getTotalTrackedSites() {
-  const db = await openDatabase();
-
-  return new Promise((resolve, reject) => {
-    let totalSites = 0;
-
-    const tx = db.transaction(DB_NAME, 'readonly');
-    tx.onerror = () => reject(tx.error);
-
-    const store = tx.objectStore(DB_NAME);
-    const indexedByUrl = store.index('url');
-
-    indexedByUrl.openCursor(null, 'nextunique').onsuccess = (event) => {
-      const cursor = event.target.result;
-      if (cursor) {
-        totalSites++;
-
-        cursor.continue();
-      } else {
-        resolve(totalSites);
-      }
-    };
-  });
-}
 
 async function captureScreenshot() {
   return new Promise((resolve, reject) => {
@@ -208,6 +46,7 @@ async function sampleActiveTab() {
     if (!response) return null;
 
     return {
+      dataUrl: response,
       sample: average_luma_in_nits_from_data_uri(response),
       url: tab.url,
     };
@@ -241,22 +80,14 @@ async function sampleLoop() {
   try {
     const response = await sampleActiveTab();
     if (response) {
-      await saveLuminanceData(response.sample, response.url);
+      await db.MUTATIONS.saveLuminanceData(response.sample, response.url);
+      updateSavings(response.dataUrl);
       await broadcastStats({
         currentLuminance: response.sample,
-        totalTrackedSites: await getTotalTrackedSites(),
+        totalTrackedSites: await db.QUERIES.getTotalTrackedSites(),
       });
-      console.log(
-        `[SAMPLE - ${new Date().toISOString()}] saved sample ${
-          response.sample
-        } for ${response.url} `
-      );
     }
   } catch (err) {
-    console.error(
-      `[SAMPLE - ${new Date().toISOString()}] Sample loop error:`,
-      err
-    );
     error('SAMPLE', `${new Date().toISOString()} Sample loop error:`, err);
   }
   const elapsed = performance.now() - t0;
@@ -264,13 +95,12 @@ async function sampleLoop() {
 }
 
 function updateSavings(dataUrl) {
-  const { displayWidth, displayHeight } =
-    displayLengthsFromInfo(displayDimensions);
+  const { width, height } = displayDimensions;
   const hours = 1;
   const tech = DisplayTech.LCD;
   const saving = estimate_saved_energy_mwh_from_data_uri(
-    displayWidth,
-    displayHeight,
+    width,
+    height,
     hours,
     tech,
     dataUrl
@@ -285,7 +115,7 @@ async function main() {
   await refreshDisplayInfo();
 
   hello_wasm();
-  openDatabase().catch(console.error);
+  // initial database setup is handled by QUERIES and MUTATIONS as needed
 
   sampleLoop();
 }
@@ -295,7 +125,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     case 'average_luma': {
       try {
         const data = new Uint8Array(request.data);
-        const result = average_luma(data);
+        const result = average_luma_relative(data);
         sendResponse(result);
       } catch (err) {
         error('LUMA', 'Error computing luma:', err);
@@ -316,7 +146,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 
     case 'get_current_luminance_data': {
-      getLatestLuminanceData()
+      db.QUERIES.getLatestLuminanceData()
         .then((data) => sendResponse(data))
         .catch((err) => {
           error('DB', 'Error fetching luminance data:', err);
@@ -326,7 +156,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 
     case 'get_all_luminance_data': {
-      getAllLuminanceData()
+      db.QUERIES.getAllLuminanceData()
         .then((data) => sendResponse(data))
         .catch((err) => {
           error('DB', 'Error fetching luminance data:', err);
@@ -336,7 +166,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 
     case 'get_luminance_data_for_date': {
-      getLuminanceDataForDate(request.date)
+      db.QUERIES.getLuminanceDataForDate(request.date)
         .then((data) => sendResponse(data))
         .catch((err) => {
           error('DB', 'Error fetching luminance data:', err);
@@ -346,7 +176,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 
     case 'get_luminance_data_for_date_range': {
-      getLuminanceAverageForDateRange(request.startDate, request.endDate)
+      db.QUERIES.getLuminanceAverageForDateRange(
+        request.startDate,
+        request.endDate
+      )
         .then((data) => sendResponse(data))
         .catch((err) => {
           error('DB', 'Error fetching luminance data:', err);
@@ -356,7 +189,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 
     case 'get_total_tracked_sites': {
-      getTotalTrackedSites()
+      db.QUERIES.getTotalTrackedSites()
         .then((data) => sendResponse(data))
         .catch((err) => {
           error('DB', 'Error fetching luminance data:', err);
