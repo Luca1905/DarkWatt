@@ -101,6 +101,57 @@ fn downscale_to_size(img: &DynamicImage, size: u32) -> Vec<u8> {
 }
 
 #[wasm_bindgen]
+pub fn estimate_saved_energy_mwh_from_data_uri(
+    display_width: u32,  // inch
+    display_height: u32, // inch
+    hours: f32,
+    tech: DisplayTech,
+    uri: &str,
+) -> u32 {
+    // 1. Calculate display area
+    let (display_width_meter, display_height_meter) = (
+        inch_to_meter(display_width as f32),
+        inch_to_meter(display_height as f32),
+    );
+    let display_area_m2 = display_width_meter * display_height_meter;
+
+    // 2. Calculate electrical power saved (W)
+    let delta_nits = estimate_saved_nits_from_data_uri(uri);
+    let delta_lumen = PI * delta_nits * display_area_m2;
+    let efficacy_lm_w = match tech {
+        DisplayTech::LCD => EFFICACY_LCD_LM_PER_W,
+        DisplayTech::OLED => EFFICACY_OLED_LM_PER_W,
+    };
+    let power_saved_w = delta_lumen / efficacy_lm_w;
+
+    // 3. Calculate energy saved (MWh)
+    let energy_saved_mwh = power_saved_w * hours;
+
+    energy_saved_mwh.round() as u32
+}
+
+fn estimate_saved_nits_from_data_uri(uri: &str) -> f32 {
+    let result = (|| {
+        let bytes = decode_data_uri(uri).map_err(|e| e.to_string())?;
+        let img = image::load_from_memory(&bytes).map_err(|e| e.to_string())?;
+        let small = downscale_to_size(&img, DOWNSCALE_SIZE);
+
+        let nits = average_luma_in_nits(&small);
+        let dark_pixels = convert_rgba_to_dark_mode(&small);
+        let dark_nits = average_luma_in_nits(&dark_pixels);
+        Ok::<f32, String>((nits - dark_nits).max(0.0))
+    })();
+
+    match result {
+        Ok(v) => v,
+        Err(err) => {
+            log(&format!("[WASM] failed to estimate saved nits: {}", err));
+            0.0
+        }
+    }
+}
+
+#[wasm_bindgen]
 pub fn convert_rgba_to_dark_mode(pixels: &[u8]) -> Vec<u8> {
     debug_assert!(pixels.len() % constants::PIXEL_COMPONENTS == 0);
 
@@ -419,6 +470,22 @@ mod tests {
         assert_eq!(scaled.len(), (DOWNSCALE_SIZE * DOWNSCALE_SIZE * 4) as usize);
     }
 
+    #[test]
+    fn estimate_saved_energy_safe_on_invalid_uri() {
+        let energy =
+            estimate_saved_energy_mwh_from_data_uri(10, 10, 1.0, DisplayTech::LCD, "invalid_uri");
+        assert_eq!(energy, 0);
+    }
+
+    #[test]
+    fn convert_rgba_empty_slice() {
+        let data: Vec<u8> = Vec::new();
+        let out = convert_rgba_to_dark_mode(&data);
+        assert!(
+            out.is_empty(),
+            "Empty input slice should yield empty output"
+        );
+    }
 }
 
 #[inline]

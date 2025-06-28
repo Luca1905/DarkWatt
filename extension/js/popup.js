@@ -7,6 +7,7 @@ const appState = {
   weekSavings: null,
   totalSavings: null,
   potentialSaving: null,
+  displayInfo: null,
 };
 
 const stateSubscribers = new Set();

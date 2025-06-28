@@ -2,7 +2,8 @@ import initWasmModule, {
   hello_wasm,
   average_luma_in_nits,
   average_luma_in_nits_from_data_uri,
-  convert_rgba_to_dark_mode,
+  estimate_saved_energy_mwh_from_data_uri,
+  DisplayTech,
 } from './wasm/wasm_mod.js';
 
 const DB_NAME = 'darkWatt-storage';
@@ -12,7 +13,7 @@ let latestSample = null;
 const SAMPLE_INTERVAL = 1000;
 
 let currentPageMode = 'unknown';
-let currentSaving = 0;
+let displayDimensions = { width: 0, height: 0 };
 
 function openDatabase() {
   return new Promise((resolve, reject) => {
@@ -210,23 +211,16 @@ async function sampleActiveTab() {
       url: tab.url,
     };
   } catch (err) {
-    console.log(`[SAMPLE - ${new Date().toISOString()}] skipped sample:`, {
-      message: err.message,
-    });
+    console.log(`[SAMPLE - ${new Date().toISOString()}] skipped sample:`, err.toString());
     return null;
   }
 }
 
-async function broadcastStats() {
+async function broadcastStats(stats) {
   try {
     await chrome.runtime.sendMessage({
       action: 'stats_update',
-      stats: {
-        currentLuminance: latestSample?.luminance ?? null,
-        totalTrackedSites: await getTotalTrackedSites(),
-        cpuUsage: null,
-        potentialSaving: currentSaving,
-      },
+      stats,
     });
   } catch (err) {
     console.log(
@@ -244,9 +238,13 @@ async function sampleLoop() {
     const response = await sampleActiveTab();
     if (response) {
       await saveLuminanceData(response.sample, response.url);
-      await broadcastStats();
+      await broadcastStats({
+        currentLuminance: response.sample,
+        totalTrackedSites: await getTotalTrackedSites(),
+      });
       console.log(
-        `[SAMPLE - ${new Date().toISOString()}] saved sample ${response.sample
+        `[SAMPLE - ${new Date().toISOString()}] saved sample ${
+          response.sample
         } for ${response.url} `
       );
     }
@@ -260,9 +258,27 @@ async function sampleLoop() {
   setTimeout(sampleLoop, Math.max(0, SAMPLE_INTERVAL - elapsed));
 }
 
+function updateSavings(dataUrl) {
+  const { displayWidth, displayHeight } =
+    displayLengthsFromInfo(displayDimensions);
+  const hours = 1;
+  const tech = DisplayTech.LCD;
+  const saving = estimate_saved_energy_mwh_from_data_uri(
+    displayWidth,
+    displayHeight,
+    hours,
+    tech,
+    dataUrl
+  );
+  broadcastStats({ potentialSaving: saving });
+}
+
 async function main() {
   // init
   await initWasmModule();
+
+  await refreshDisplayInfo();
+
   hello_wasm();
   openDatabase().catch(console.error);
 
@@ -349,30 +365,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
       if (currentPageMode === 'light') {
         captureScreenshot()
-          .then((dataUrl) => calculateSavingsFromDataUrl(dataUrl))
-          .then(({ saving }) => {
-            currentSaving = saving;
-            broadcastStats();
-          })
+          .then((dataUrl) => updateSavings(dataUrl))
           .catch((err) => {
             console.error('[DarkWatt] error calculating savings:', err);
             currentSaving = 0;
           })
           .finally(() => sendResponse({ status: 'ok' }));
-        return true; // keep port open for async
+        return true;
       } else {
-        currentSaving = 0;
         broadcastStats();
         sendResponse({ status: 'ok' });
         return false;
       }
-    }
-
-    case 'display_info_update': {
-      const { displayInfo } = request;
-      console.log('[DISPLAY INFO] received display info:', displayInfo);
-      sendResponse({ status: 'ok' });
-      return false;
     }
 
     default:
@@ -397,12 +401,7 @@ chrome.processes.onUpdated.addListener(async (processes) => {
 
     const response = await chrome.runtime.sendMessage({
       action: 'stats_update',
-      stats: {
-        currentLuminance: latestSample?.luminance ?? null,
-        totalTrackedSites: await getTotalTrackedSites(),
-        cpuUsage: activeProcess.cpu,
-        potentialSaving: currentSaving,
-      },
+      stats: { cpuUsage: activeProcess.cpu },
     });
     console.log(
       `[STATS  - ${new Date().toISOString()}] updated stats: `,
@@ -417,30 +416,32 @@ chrome.processes.onUpdated.addListener(async (processes) => {
   }
 });
 
-async function calculateSavingsFromDataUrl(dataUrl) {
+function displayLengthsFromInfo(displayInfo) {
+  if (!displayInfo) return { width: 0, height: 0 };
+
+  const CSS_DPI = 96;
+  const { width: pixelW, height: pixelH } = displayInfo.workArea;
+  const dsf = displayInfo.deviceScaleFactor || 1;
+
+  const widthInches = pixelW / dsf / CSS_DPI;
+  const heightInches = pixelH / dsf / CSS_DPI;
+
+  return { width: widthInches, height: heightInches };
+}
+
+async function refreshDisplayInfo() {
   try {
-    const blob = await (await fetch(dataUrl)).blob();
-    const bitmap = await createImageBitmap(blob);
-
-    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(bitmap, 0, 0);
-    const { data } = ctx.getImageData(0, 0, bitmap.width, bitmap.height);
-
-    const pixels = new Uint8Array(data.buffer);
-
-    const originalNits = average_luma_in_nits(pixels);
-
-    const darkPixels = convert_rgba_to_dark_mode(pixels);
-    const darkNits = average_luma_in_nits(darkPixels);
-
-    const saving = Math.max(0, originalNits - darkNits);
-
-    return { saving, originalNits, darkNits };
+    const displays = await chrome.system.display.getInfo();
+    const primaryDisplay = displays.find((d) => d.isPrimary) || displays[0];
+    console.log('[DISPLAY INFO] primaryDisplay:', primaryDisplay);
+    displayDimensions = displayLengthsFromInfo(primaryDisplay);
+    console.log('[DISPLAY INFO] displayDimensions:', displayDimensions);
+    broadcastStats({ displayInfo: displayDimensions });
   } catch (err) {
-    console.error('[DarkWatt] Failed to calculate savings:', err);
-    return { saving: 0 };
+    console.error('[DISPLAY INFO] Failed to fetch:', err);
   }
 }
+
+chrome.system.display.onDisplayChanged.addListener(refreshDisplayInfo);
 
 main();

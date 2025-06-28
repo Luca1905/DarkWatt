@@ -9,20 +9,44 @@
     'dark_background',
   ];
 
+  const SRGB_MAX = 255;
+  const SRGB_THRESHOLD = 0.04045;
+  const SRGB_DIVISOR = 12.92;
+  const SRGB_OFFSET = 0.055;
+  const SRGB_SCALE = 1.055;
+  const SRGB_GAMMA = 2.4;
+
+  const LUMINANCE_R_COEFF = 0.2126;
+  const LUMINANCE_G_COEFF = 0.7152;
+  const LUMINANCE_B_COEFF = 0.0722;
+
+  const DARK_LUMINANCE_THRESHOLD = 0.2;
+
+  const srgbToLinear = (c) => {
+    c /= SRGB_MAX;
+    return c <= SRGB_THRESHOLD
+      ? c / SRGB_DIVISOR
+      : Math.pow((c + SRGB_OFFSET) / SRGB_SCALE, SRGB_GAMMA);
+  };
+
+  const relativeLuminance = (r, g, b) =>
+    LUMINANCE_R_COEFF * srgbToLinear(r) +
+    LUMINANCE_G_COEFF * srgbToLinear(g) +
+    LUMINANCE_B_COEFF * srgbToLinear(b);
+
+  const parseRgb = (cssColor) => {
+    const match = cssColor.match(/rgba?\(([^)]+)\)/);
+    if (!match) return null;
+    const channels = match[1]
+      .split(',')
+      .slice(0, 3)
+      .map((v) => parseInt(v.trim(), 10));
+    return channels.some((x) => Number.isNaN(x)) ? null : channels;
+  };
+
   function hasDarkClass(el) {
     if (!el || !el.classList) return false;
     return DARK_CLASS_NAMES.some((cls) => el.classList.contains(cls));
-  }
-
-  function relativeLuminance(r, g, b) {
-    const srgbToLinear = (c) => {
-      c /= 255;
-      return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-    };
-    const R = srgbToLinear(r);
-    const G = srgbToLinear(g);
-    const B = srgbToLinear(b);
-    return 0.2126 * R + 0.7152 * G + 0.0722 * B;
   }
 
   function isDarkByBg(element) {
@@ -31,16 +55,10 @@
     const bg = style.backgroundColor || style.color;
     if (!bg || bg === 'transparent') return false;
 
-    const rgbMatch = bg.match(/rgba?\(([^)]+)\)/);
-    if (!rgbMatch) return false;
-    const [r, g, b] = rgbMatch[1]
-      .split(',')
-      .slice(0, 3)
-      .map((v) => parseInt(v.trim(), 10));
+    const rgb = parseRgb(bg);
+    if (!rgb) return false;
 
-    if ([r, g, b].some((x) => Number.isNaN(x))) return false;
-
-    return relativeLuminance(r, g, b) < 0.2;
+    return relativeLuminance(...rgb) < DARK_LUMINANCE_THRESHOLD;
   }
 
   function detectPageMode() {
@@ -65,40 +83,24 @@
       console.warn('[SCRIPT] Unable to send background message:', err);
     }
   }
-
-  function sendDisplayInfo() {
-    if (!chrome.system || !chrome.system.display || !chrome.system.display.getInfo) {
-      console.warn('[SCRIPT] system.display API not available');
-      return; 
-    }
-
-    chrome.system.display
-      .getInfo()
-      .then((displayInfo) => {
-        sendBackgroundMessage('display_info_update', { displayInfo });
-      })
-      .catch((err) => {
-        console.warn('[SCRIPT] Unable to get display info:', err);
-      });
-  }
-
-  chrome.system.display.onDisplayChanged.addListener(sendDisplayInfo);
-
   function init() {
     const mode = detectPageMode();
     console.log(`[SCRIPT] Detected page mode: ${mode}`);
     sendBackgroundMessage('page_mode_detected', { mode });
-    sendDisplayInfo();
   }
 
-  if (
-    document.readyState === 'complete' ||
-    document.readyState === 'interactive'
-  ) {
-    init();
-  } else {
-    window.addEventListener('DOMContentLoaded', init, { once: true });
-  }
+  const onDomReady = (cb) => {
+    if (
+      document.readyState === 'complete' ||
+      document.readyState === 'interactive'
+    ) {
+      cb();
+    } else {
+      window.addEventListener('DOMContentLoaded', cb, { once: true });
+    }
+  };
+
+  onDomReady(init);
 
   window.DarkWatt_checkTheme = init;
 })();
