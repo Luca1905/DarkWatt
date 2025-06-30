@@ -4,16 +4,25 @@
   "type": "module",
   "private": true,
   "scripts": {
+    "build": "bun run config/build.ts",
     "typecheck": "tsc --noEmit",
     "check": "biome check .",
     "check:unsafe": "biome check --write --unsafe .",
     "check:write": "biome check --write ."
   },
   "devDependencies": {
-    "@biomejs/biome": "2.0.6",
-    "@types/bun": "latest"
+    "@biomejs/biome": "^2.0.6",
+    "@types/adm-zip": "^0.5.7",
+    "@types/bun": "^1.2.17",
+    "@types/chrome": "^0.0.328",
+    "@types/react-dom": "^19.1.6",
+    "adm-zip": "^0.5.16"
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
   }
 }
