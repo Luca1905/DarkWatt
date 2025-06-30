@@ -26,7 +26,7 @@
 		c /= SRGB_MAX;
 		return c <= SRGB_THRESHOLD
 			? c / SRGB_DIVISOR
-			: Math.pow((c + SRGB_OFFSET) / SRGB_SCALE, SRGB_GAMMA);
+			: ((c + SRGB_OFFSET) / SRGB_SCALE) ** SRGB_GAMMA;
 	};
 
 	const relativeLuminance = (r, g, b) =>
@@ -69,7 +69,7 @@
 			return "dark";
 		}
 		if (isDarkByBg(body)) {
-			console.log(`[SCRIPT] Detected dark background`);
+			console.log("[SCRIPT] Detected dark background");
 			return "dark";
 		}
 

@@ -1,18 +1,24 @@
-const DB_NAME = "darkWatt-storage";
+const DB_NAME = "darkWatt-storage" as const;
 const DB_VERSION = 1;
 
-let _dbPromise = null;
+export interface LuminanceRecord {
+	luminance: number;
+	url: string;
+	date: string;
+}
 
-function openDatabase() {
+let _dbPromise: Promise<IDBDatabase> | null = null;
+
+function openDatabase(): Promise<IDBDatabase> {
 	if (_dbPromise) return _dbPromise;
 
-	_dbPromise = new Promise((resolve, reject) => {
-		const request = indexedDB.open(DB_NAME, DB_VERSION);
+	_dbPromise = new Promise<IDBDatabase>((resolve, reject) => {
+		const request: IDBOpenDBRequest = indexedDB.open(DB_NAME, DB_VERSION);
 
 		request.onerror = () => reject(request.error);
 
-		request.onupgradeneeded = (event) => {
-			const db = event.target.result;
+		request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
+			const db = (event.target as IDBOpenDBRequest).result;
 			if (!db.objectStoreNames.contains(DB_NAME)) {
 				const store = db.createObjectStore(DB_NAME, { keyPath: "date" });
 				store.createIndex("date", "date", { unique: true });
@@ -27,26 +33,23 @@ function openDatabase() {
 }
 
 const QUERIES = {
-	getAllLuminanceData: async () => {
+	getAllLuminanceData: async (): Promise<LuminanceRecord[]> => {
 		const db = await openDatabase();
-		return new Promise((resolve, reject) => {
+		return new Promise<LuminanceRecord[]>((resolve, reject) => {
 			const tx = db.transaction(DB_NAME, "readonly");
 			tx.onerror = () => reject(tx.error);
 
 			const store = tx.objectStore(DB_NAME);
-
 			const request = store.getAll();
 
 			request.onerror = () => reject(request.error);
-			request.onsuccess = (event) => {
-				resolve(event.target.result);
-			};
+			request.onsuccess = () => resolve(request.result as LuminanceRecord[]);
 		});
 	},
 
-	getLatestLuminanceData: async () => {
+	getLatestLuminanceData: async (): Promise<LuminanceRecord | null> => {
 		const db = await openDatabase();
-		return new Promise((resolve, reject) => {
+		return new Promise<LuminanceRecord | null>((resolve, reject) => {
 			const tx = db.transaction(DB_NAME, "readonly");
 			tx.onerror = () => reject(tx.error);
 
@@ -54,17 +57,20 @@ const QUERIES = {
 			const request = store.openCursor(null, "prev");
 
 			request.onerror = () => reject(request.error);
-			request.onsuccess = (event) => {
-				const cursor = event.target.result;
-				resolve(cursor ? cursor.value : null);
+			request.onsuccess = () => {
+				const cursor = request.result as IDBCursorWithValue | null;
+				resolve(cursor ? (cursor.value as LuminanceRecord) : null);
 			};
 		});
 	},
 
-	getLuminanceAverageForDateRange: async (startDate, endDate) => {
+	getLuminanceAverageForDateRange: async (
+		startDate: Date,
+		endDate: Date,
+	): Promise<number> => {
 		const db = await openDatabase();
-		return new Promise((resolve, reject) => {
-			const weekData = [];
+		return new Promise<number>((resolve, reject) => {
+			const weekData: LuminanceRecord[] = [];
 			const keyRange = IDBKeyRange.bound(
 				startDate.toISOString(),
 				endDate.toISOString(),
@@ -76,9 +82,9 @@ const QUERIES = {
 			const store = tx.objectStore(DB_NAME);
 
 			store.openCursor(keyRange).onsuccess = (event) => {
-				const cursor = event.target.result;
+				const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
 				if (cursor) {
-					weekData.push(cursor.value);
+					weekData.push(cursor.value as LuminanceRecord);
 					cursor.continue();
 				} else {
 					const averageLuminance =
@@ -90,7 +96,7 @@ const QUERIES = {
 		});
 	},
 
-	getLuminanceDataForDate: async (date) => {
+	getLuminanceDataForDate: async (date: Date): Promise<number> => {
 		const dayBeginning = new Date(date);
 		dayBeginning.setHours(0, 0, 0, 0);
 		const dayEnding = new Date(date);
@@ -98,8 +104,8 @@ const QUERIES = {
 
 		const db = await openDatabase();
 
-		return new Promise((resolve, reject) => {
-			const dayData = [];
+		return new Promise<number>((resolve, reject) => {
+			const dayData: LuminanceRecord[] = [];
 			const keyRange = IDBKeyRange.bound(
 				dayBeginning.toISOString(),
 				dayEnding.toISOString(),
@@ -111,9 +117,9 @@ const QUERIES = {
 			const store = tx.objectStore(DB_NAME);
 
 			store.openCursor(keyRange).onsuccess = (event) => {
-				const cursor = event.target.result;
+				const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
 				if (cursor) {
-					dayData.push(cursor.value);
+					dayData.push(cursor.value as LuminanceRecord);
 					cursor.continue();
 				} else {
 					const averageLuminance =
@@ -125,10 +131,10 @@ const QUERIES = {
 		});
 	},
 
-	getTotalTrackedSites: async () => {
+	getTotalTrackedSites: async (): Promise<number> => {
 		const db = await openDatabase();
 
-		return new Promise((resolve, reject) => {
+		return new Promise<number>((resolve, reject) => {
 			let totalSites = 0;
 
 			const tx = db.transaction(DB_NAME, "readonly");
@@ -138,7 +144,7 @@ const QUERIES = {
 			const indexedByUrl = store.index("url");
 
 			indexedByUrl.openCursor(null, "nextunique").onsuccess = (event) => {
-				const cursor = event.target.result;
+				const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
 				if (cursor) {
 					totalSites++;
 					cursor.continue();
@@ -151,16 +157,16 @@ const QUERIES = {
 };
 
 const MUTATIONS = {
-	saveLuminanceData: async (nits, url) => {
+	saveLuminanceData: async (nits: number, url: string): Promise<void> => {
 		const db = await openDatabase();
 
-		const record = {
+		const record: LuminanceRecord = {
 			luminance: nits,
 			url: url,
 			date: new Date().toISOString(),
 		};
 
-		return new Promise((resolve, reject) => {
+		return new Promise<void>((resolve, reject) => {
 			const tx = db.transaction(DB_NAME, "readwrite");
 
 			tx.onerror = () => reject(tx.error);

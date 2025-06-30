@@ -1,42 +1,39 @@
-import initWasmModule, {
-	hello_wasm,
-	average_luma_relative,
-	average_luma_in_nits,
-} from "./wasm/wasm_mod.js";
-
-import db from "./storage.js";
-
-import { error, warn } from "./utils/logger.js";
-
 import {
 	getDisplayDimensions,
 	refreshDisplayInfo,
-} from "./background/display.js";
-import { sampleActiveTab as sampleTab } from "./background/sampling.js";
-import { calculatePotentialSavingsMWh } from "./background/savings.js";
-import { broadcastStats as sendStats } from "./background/stats.js";
+} from "./background_modules/display.js";
+import { sampleActiveTab as sampleTab } from "./background_modules/sampling.js";
+import { calculatePotentialSavingsMWh } from "./background_modules/savings.js";
+import { broadcastStats as sendStats } from "./background_modules/stats.js";
+import db, { type LuminanceRecord } from "./storage/storage.js";
+import { error, warn } from "./utils/logger";
+import initWasmModule, {
+	average_luma_in_nits,
+	average_luma_relative,
+	hello_wasm,
+} from "./wasm/wasm_mod.js";
 
 const SAMPLE_INTERVAL = 1000;
 
-async function captureScreenshot() {
+async function captureScreenshot(): Promise<string> {
 	return new Promise((resolve, reject) => {
-		chrome.tabs.captureVisibleTab(null, { format: "png" }, (dataUrl) => {
+		chrome.tabs.captureVisibleTab({ format: "png" }, (dataUrl) => {
 			if (chrome.runtime.lastError) {
 				reject(chrome.runtime.lastError);
 			} else {
-				resolve(dataUrl);
+				resolve(dataUrl as string);
 			}
 		});
 	});
 }
 
-async function sampleLoop() {
+async function sampleLoop(): Promise<void> {
 	const t0 = performance.now();
 
 	try {
 		const response = await sampleTab();
 		if (response) {
-			await db.MUTATIONS.saveLuminanceData(response.sample, response.url);
+			await db.MUTATIONS.saveLuminanceData(response.sample, response.url ?? "");
 
 			const savingMWh = calculatePotentialSavingsMWh(
 				response.dataUrl,
@@ -59,15 +56,12 @@ async function sampleLoop() {
 
 async function main() {
 	await initWasmModule();
-
 	await refreshDisplayInfo();
-
 	hello_wasm();
-
 	sampleLoop();
 }
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 	switch (request.action) {
 		case "average_luma": {
 			try {
@@ -94,8 +88,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 		case "get_current_luminance_data": {
 			db.QUERIES.getLatestLuminanceData()
-				.then((data) => sendResponse(data))
-				.catch((err) => {
+				.then((data: LuminanceRecord | null) => sendResponse(data))
+				.catch((err: unknown) => {
 					error("DB", "Error fetching luminance data:", err);
 					sendResponse(null);
 				});
@@ -104,8 +98,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 		case "get_all_luminance_data": {
 			db.QUERIES.getAllLuminanceData()
-				.then((data) => sendResponse(data))
-				.catch((err) => {
+				.then((data: unknown) => sendResponse(data))
+				.catch((err: unknown) => {
 					error("DB", "Error fetching luminance data:", err);
 					sendResponse(null);
 				});
@@ -114,8 +108,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 		case "get_luminance_data_for_date": {
 			db.QUERIES.getLuminanceDataForDate(request.date)
-				.then((data) => sendResponse(data))
-				.catch((err) => {
+				.then((data: unknown) => sendResponse(data))
+				.catch((err: unknown) => {
 					error("DB", "Error fetching luminance data:", err);
 					sendResponse(null);
 				});
@@ -127,8 +121,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 				request.startDate,
 				request.endDate,
 			)
-				.then((data) => sendResponse(data))
-				.catch((err) => {
+				.then((data: unknown) => sendResponse(data))
+				.catch((err: unknown) => {
 					error("DB", "Error fetching luminance data:", err);
 					sendResponse(null);
 				});
@@ -137,8 +131,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 		case "get_total_tracked_sites": {
 			db.QUERIES.getTotalTrackedSites()
-				.then((data) => sendResponse(data))
-				.catch((err) => {
+				.then((data: unknown) => sendResponse(data))
+				.catch((err: unknown) => {
 					error("DB", "Error fetching luminance data:", err);
 					sendResponse(null);
 				});
@@ -146,7 +140,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 		}
 
 		case "page_mode_detected": {
-			currentPageMode = request.mode || "unknown";
+			const currentPageMode = request.mode || "unknown";
 
 			if (currentPageMode === "light") {
 				captureScreenshot()
@@ -162,10 +156,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 					})
 					.finally(() => sendResponse({ status: "ok" }));
 				return true;
-			} else {
-				sendResponse({ status: "ok" });
-				return false;
 			}
+			sendResponse({ status: "ok" });
+			return false;
 		}
 
 		default:
@@ -174,7 +167,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 	}
 });
 
-chrome.processes.onUpdated.addListener(async (processes) => {
+// @ts-ignore – processes API is not yet in the typings
+// biome-ignore lint/suspicious/noExplicitAny: processes API typings missing
+chrome.processes.onUpdated.addListener(async (processes: any) => {
 	try {
 		const [currentTab] = await chrome.tabs.query({
 			active: true,
@@ -182,6 +177,7 @@ chrome.processes.onUpdated.addListener(async (processes) => {
 		});
 		if (!currentTab) return;
 
+		// @ts-ignore – processes API typings missing
 		const activeProcessId = await chrome.processes.getProcessIdForTab(
 			currentTab.id,
 		);
@@ -195,4 +191,6 @@ chrome.processes.onUpdated.addListener(async (processes) => {
 	}
 });
 
-main();
+main().catch((err) => {
+	error("DARKWATT", "Background main() failed:", err);
+});
