@@ -3,19 +3,12 @@ import {
 	estimate_saved_energy_mwh_from_data_uri,
 } from "../wasm/wasm_mod.js";
 
-/**
- * @param {string} dataUrl PNG data URI
- * @param {{width:number,height:number}} displayDimensions inches
- * @param {number} hours default 1
- * @param {DisplayTech} tech LCD/OLED
- * @returns {number} mWh (integer)
- */
 export function calculatePotentialSavingsMWh(
-	dataUrl,
-	{ width, height },
+	dataUrl: string,
+	{ width, height }: { width: number; height: number },
 	hours = 1,
-	tech = DisplayTech.LCD,
-) {
+	tech: DisplayTech = DisplayTech.LCD,
+): number {
 	const wh = estimate_saved_energy_mwh_from_data_uri(
 		Math.round(width),
 		Math.round(height),

@@ -1,9 +1,7 @@
-import { warn } from "../utils/logger.js";
+import type { stats } from "../models/stats.ts";
+import { warn } from "../utils/logger.ts";
 
-/**
- * @param {Record<string, any>} partialStats
- */
-export async function broadcastStats(partialStats = {}) {
+export async function broadcastStats(partialStats: Partial<stats>) {
 	try {
 		await chrome.runtime.sendMessage({
 			action: "stats_update",
