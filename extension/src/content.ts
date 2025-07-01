@@ -1,5 +1,5 @@
 (() => {
-	const DARK_CLASS_NAMES = [
+	const DARK_CLASS_NAMES: readonly string[] = [
 		"dark",
 		"dark-mode",
 		"theme-dark",
@@ -9,47 +9,49 @@
 		"dark_background",
 	];
 
-	const SRGB_MAX = 255;
-	const SRGB_THRESHOLD = 0.04045;
-	const SRGB_DIVISOR = 12.92;
-	const SRGB_OFFSET = 0.055;
-	const SRGB_SCALE = 1.055;
-	const SRGB_GAMMA = 2.4;
+	const SRGB_MAX = 255 as const;
+	const SRGB_THRESHOLD = 0.04045 as const;
+	const SRGB_DIVISOR = 12.92 as const;
+	const SRGB_OFFSET = 0.055 as const;
+	const SRGB_SCALE = 1.055 as const;
+	const SRGB_GAMMA = 2.4 as const;
 
-	const LUMINANCE_R_COEFF = 0.2126;
-	const LUMINANCE_G_COEFF = 0.7152;
-	const LUMINANCE_B_COEFF = 0.0722;
+	const LUMINANCE_R_COEFF = 0.2126 as const;
+	const LUMINANCE_G_COEFF = 0.7152 as const;
+	const LUMINANCE_B_COEFF = 0.0722 as const;
 
-	const DARK_LUMINANCE_THRESHOLD = 0.2;
+	const DARK_LUMINANCE_THRESHOLD = 0.2 as const;
 
-	const srgbToLinear = (c) => {
-		c /= SRGB_MAX;
-		return c <= SRGB_THRESHOLD
-			? c / SRGB_DIVISOR
-			: ((c + SRGB_OFFSET) / SRGB_SCALE) ** SRGB_GAMMA;
+	const srgbToLinear = (channel: number): number => {
+		const normalized = channel / SRGB_MAX;
+		return normalized <= SRGB_THRESHOLD
+			? normalized / SRGB_DIVISOR
+			: ((normalized + SRGB_OFFSET) / SRGB_SCALE) ** SRGB_GAMMA;
 	};
 
-	const relativeLuminance = (r, g, b) =>
+	const relativeLuminance = (r: number, g: number, b: number): number =>
 		LUMINANCE_R_COEFF * srgbToLinear(r) +
 		LUMINANCE_G_COEFF * srgbToLinear(g) +
 		LUMINANCE_B_COEFF * srgbToLinear(b);
 
-	const parseRgb = (cssColor) => {
+	const parseRgb = (cssColor: string): [number, number, number] | null => {
 		const match = cssColor.match(/rgba?\(([^)]+)\)/);
 		if (!match) return null;
+
 		const channels = match[1]
 			.split(",")
 			.slice(0, 3)
-			.map((v) => Number.parseInt(v.trim(), 10));
+			.map((v) => Number.parseInt(v.trim(), 10)) as [number, number, number];
+
 		return channels.some((x) => Number.isNaN(x)) ? null : channels;
 	};
 
-	function hasDarkClass(el) {
-		if (!el || !el.classList) return false;
+	const hasDarkClass = (el: Element | null): boolean => {
+		if (!el || !("classList" in el)) return false;
 		return DARK_CLASS_NAMES.some((cls) => el.classList.contains(cls));
-	}
+	};
 
-	function isDarkByBg(element) {
+	const isDarkByBg = (element: Element | null): boolean => {
 		if (!element) return false;
 		const style = getComputedStyle(element);
 		const bg = style.backgroundColor || style.color;
@@ -59,9 +61,9 @@
 		if (!rgb) return false;
 
 		return relativeLuminance(...rgb) < DARK_LUMINANCE_THRESHOLD;
-	}
+	};
 
-	function detectPageMode() {
+	const detectPageMode = (): "dark" | "light" => {
 		const body = document.body;
 
 		if (hasDarkClass(body)) {
@@ -74,22 +76,26 @@
 		}
 
 		return "light";
-	}
+	};
 
-	function sendBackgroundMessage(action, payload = {}) {
+	const sendBackgroundMessage = (
+		action: string,
+		payload: Record<string, unknown> = {},
+	): void => {
 		try {
 			chrome.runtime.sendMessage({ action, ...payload });
 		} catch (err) {
 			console.warn("[SCRIPT] Unable to send background message:", err);
 		}
-	}
-	function init() {
+	};
+
+	const init = (): void => {
 		const mode = detectPageMode();
 		console.log(`[SCRIPT] Detected page mode: ${mode}`);
 		sendBackgroundMessage("page_mode_detected", { mode });
-	}
+	};
 
-	const onDomReady = (cb) => {
+	const onDomReady = (cb: () => void): void => {
 		if (
 			document.readyState === "complete" ||
 			document.readyState === "interactive"
@@ -101,6 +107,4 @@
 	};
 
 	onDomReady(init);
-
-	window.DarkWatt_checkTheme = init;
 })();
