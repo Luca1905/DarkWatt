@@ -105,15 +105,18 @@ DarkWatt is released under the MIT License – see the [LICENSE](LICENSE) file f
   - [x] set up message connections to get and save luma data
   - [ ] implement savings logic
     - [x] heuristic function for light mode page into dark mode page
-    - [x] heuristic function for detecting light e.g. dark mode page
+    - [ ] heuristic function for detecting light e.g. dark mode page
+      - [ ] BUG: youtube not detected as light
     - [ ] calculating energy saving from nits saved.
     - [x] get display size for energy calculation
-- [ ] get CPU usage data
+- [x] get CPU usage data
 - [x] store data in dxdb, expose to popup
+  - [ ] use chrome storage instead
 
 - [x] remove annoying errors on installation
   - [x] error when on chrome://
   - [x] exceeding MAX_CAPTURE_VISIBLE_TAB_CALLS_PER_SECOND
+
 ### Popup:
 - [x] get data from background
 - [x] render data in UI
@@ -122,6 +125,7 @@ DarkWatt is released under the MIT License – see the [LICENSE](LICENSE) file f
   - [ ] render savings
 - [ ] settings page for custom values
 - [ ] analytics page
+- [ ] enable sample on demand
 
 - [ ] port background to web_sys using wasm
 - [ ] firefox integration
