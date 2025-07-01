@@ -9,21 +9,21 @@
 	"action": {
 		"default_title": "DarkWatt",
 		"default_icon": {
-			"256": "assets/icon256.png"
+			"256": "icons/icon256.png"
 		},
-		"default_popup": "js/popup.html"
+		"default_popup": "popup/index.html"
 	},
 	"content_security_policy": {
 		"extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
 	},
 	"background": {
 		"type": "module",
-		"service_worker": "js/background.js"
+		"service_worker": "background.js"
 	},
 	"content_scripts": [
 		{
 			"matches": ["<all_urls>"],
-			"js": ["js/content.js"],
+			"js": ["content.js"],
 			"run_at": "document_end"
 		}
 	],
@@ -33,9 +33,9 @@
 		{
 			"matches": ["<all_urls>"],
 			"resources": [
-				"js/utils/logger.js",
-				"js/wasm/wasm_mod.js",
-				"js/wasm/wasm_mod_bg.wasm"
+				"utils/logger.js",
+				"wasm/wasm_mod.js",
+				"wasm/wasm_mod_bg.wasm"
 			]
 		}
 	]

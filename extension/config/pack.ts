@@ -1,6 +1,6 @@
 import Bun, { $ } from 'bun';
 import AdmZip from 'adm-zip';
-import manifest from '../public/manifest_cr.json';
+import manifest from '../public/manifest.json';
 
 import './cwd';
 

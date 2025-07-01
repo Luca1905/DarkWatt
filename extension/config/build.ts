@@ -1,9 +1,9 @@
 import Bun, { $, Glob } from "bun";
 
 import "./cwd";
-import manifest from "../public/manifest_cr.json";
+import manifest from "../public/manifest.json";
 
-const outdir = "./build";
+const outdir = "../build";
 
 const {
   content_scripts,

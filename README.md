@@ -13,7 +13,7 @@ DarkWatt is a browser extension that helps you track the energy comsumption of y
 
 > **Important notice:** DarkWatt relies on the experimental `chrome.processes` API to monitor CPU usage. Consequently, the extension currently functions only in the **Chrome/Chromium Dev channel**. You can download a Dev build from <https://www.chromium.org/getting-involved/dev-channel/>. The API is documented at <https://developer.chrome.com/extensions/processes>.
 
-Firefox support is planned.w
+Firefox support is planned.
 
 ## Installation
 
@@ -44,10 +44,9 @@ $ cd darkwatt
 $ ./build.sh       # compiles the WASM crate and creates the extension bundles
 ```
 
-The script outputs two ready-to-load directories:
+The script outputs one ready-to-load directories:
 
-* `build/chrome/` – load this in Chromium based browsers.
-* `build/firefox/` – load this in Firefox Nightly.
+* `build/` – load this in Chromium based browsers.
 
 ## Usage
 
