@@ -13,7 +13,7 @@ DarkWatt is a browser extension that helps you track the energy comsumption of y
 
 > **Important notice:** DarkWatt relies on the experimental `chrome.processes` API to monitor CPU usage. Consequently, the extension currently functions only in the **Chrome/Chromium Dev channel**. You can download a Dev build from <https://www.chromium.org/getting-involved/dev-channel/>. The API is documented at <https://developer.chrome.com/extensions/processes>.
 
-Firefox support is planned.w
+Firefox support is planned.
 
 ## Installation
 
@@ -44,10 +44,9 @@ $ cd darkwatt
 $ ./build.sh       # compiles the WASM crate and creates the extension bundles
 ```
 
-The script outputs two ready-to-load directories:
+The script outputs one ready-to-load directories:
 
-* `build/chrome/` – load this in Chromium based browsers.
-* `build/firefox/` – load this in Firefox Nightly.
+* `build/` – load this in Chromium based browsers.
 
 ## Usage
 
@@ -106,15 +105,18 @@ DarkWatt is released under the MIT License – see the [LICENSE](LICENSE) file f
   - [x] set up message connections to get and save luma data
   - [ ] implement savings logic
     - [x] heuristic function for light mode page into dark mode page
-    - [x] heuristic function for detecting light e.g. dark mode page
+    - [ ] heuristic function for detecting light e.g. dark mode page
+      - [ ] BUG: youtube not detected as light
     - [ ] calculating energy saving from nits saved.
     - [x] get display size for energy calculation
-- [ ] get CPU usage data
+- [x] get CPU usage data
 - [x] store data in dxdb, expose to popup
+  - [ ] use chrome storage instead
 
 - [x] remove annoying errors on installation
   - [x] error when on chrome://
   - [x] exceeding MAX_CAPTURE_VISIBLE_TAB_CALLS_PER_SECOND
+
 ### Popup:
 - [x] get data from background
 - [x] render data in UI
@@ -123,6 +125,7 @@ DarkWatt is released under the MIT License – see the [LICENSE](LICENSE) file f
   - [ ] render savings
 - [ ] settings page for custom values
 - [ ] analytics page
+- [ ] enable sample on demand
 
 - [ ] port background to web_sys using wasm
 - [ ] firefox integration
