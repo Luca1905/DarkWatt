@@ -1,4 +1,3 @@
-import { error, log } from "../utils/logger";
 import { broadcastStats } from "./stats";
 
 let dimensions: { width: number; height: number } = {
@@ -27,15 +26,15 @@ export async function refreshDisplayInfo() {
 		const displays = await chrome.system.display.getInfo();
 		const primaryDisplay = displays.find((d) => d.isPrimary) || displays[0];
 		if (!primaryDisplay) {
-			error("DISPLAY", "no display connected");
+			console.error("[DISPLAY]", "no display connected");
 			return;
 		}
-		log("DISPLAY", "primaryDisplay:", primaryDisplay);
+		console.log("[DISPLAY]", "primaryDisplay:", primaryDisplay);
 		dimensions = displayLengthFromInfo(primaryDisplay);
-		log("DISPLAY", "primaryDisplay:", primaryDisplay);
+		console.log("[DISPLAY]", "primaryDisplay:", primaryDisplay);
 		broadcastStats({ displayInfo: dimensions });
 	} catch (err) {
-		error("DISPLAY", "Failed to fetch:", err);
+		console.error("[DISPLAY]", "Failed to fetch:", err);
 	}
 }
 

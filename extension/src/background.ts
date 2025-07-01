@@ -6,7 +6,6 @@ import { sampleActiveTab as sampleTab } from "./background_modules/sampling";
 import { calculatePotentialSavingsMWh } from "./background_modules/savings";
 import { broadcastStats as sendStats } from "./background_modules/stats";
 import db, { type LuminanceRecord } from "./storage/storage";
-import { error, warn } from "./utils/logger";
 import initWasmModule, {
 	average_luma_in_nits,
 	average_luma_relative,
@@ -47,7 +46,11 @@ async function sampleLoop(): Promise<void> {
 			});
 		}
 	} catch (err) {
-		error("SAMPLE", `${new Date().toISOString()} Sample loop error:`, err);
+		console.error(
+			"[SAMPLE]",
+			`${new Date().toISOString()} Sample loop error:`,
+			err,
+		);
 	}
 
 	const elapsed = performance.now() - t0;
@@ -69,7 +72,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 				const result = average_luma_relative(data);
 				sendResponse(result);
 			} catch (err) {
-				error("LUMA", "Error computing luma:", err);
+				console.error("[LUMA]", "Error computing luma:", err);
 				sendResponse(null);
 			}
 			return false;
@@ -80,7 +83,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 				const result = average_luma_in_nits(data);
 				sendResponse(result);
 			} catch (err) {
-				error("LUMA", "Error computing luma:", err);
+				console.error("[LUMA]", "Error computing luma:", err);
 				sendResponse(null);
 			}
 			return false;
@@ -90,7 +93,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 			db.QUERIES.getLatestLuminanceData()
 				.then((data: LuminanceRecord | null) => sendResponse(data))
 				.catch((err: unknown) => {
-					error("DB", "Error fetching luminance data:", err);
+					console.error("[DB]", "Error fetching luminance data:", err);
 					sendResponse(null);
 				});
 			return true;
@@ -100,7 +103,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 			db.QUERIES.getAllLuminanceData()
 				.then((data: unknown) => sendResponse(data))
 				.catch((err: unknown) => {
-					error("DB", "Error fetching luminance data:", err);
+					console.error("[DB]", "Error fetching luminance data:", err);
 					sendResponse(null);
 				});
 			return true;
@@ -110,7 +113,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 			db.QUERIES.getLuminanceDataForDate(request.date)
 				.then((data: unknown) => sendResponse(data))
 				.catch((err: unknown) => {
-					error("DB", "Error fetching luminance data:", err);
+					console.error("[DB]", "Error fetching luminance data:", err);
 					sendResponse(null);
 				});
 			return true;
@@ -123,7 +126,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 			)
 				.then((data: unknown) => sendResponse(data))
 				.catch((err: unknown) => {
-					error("DB", "Error fetching luminance data:", err);
+					console.error("[DB]", "Error fetching luminance data:", err);
 					sendResponse(null);
 				});
 			return true;
@@ -133,7 +136,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 			db.QUERIES.getTotalTrackedSites()
 				.then((data: unknown) => sendResponse(data))
 				.catch((err: unknown) => {
-					error("DB", "Error fetching luminance data:", err);
+					console.error("[DB]", "Error fetching luminance data:", err);
 					sendResponse(null);
 				});
 			return true;
@@ -152,7 +155,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 						return sendStats({ potentialSavingMWh: savingMWh });
 					})
 					.catch((err) => {
-						error("DARKWATT", "error calculating savings:", err);
+						console.error("[DARKWATT]", "error calculating savings:", err);
 					})
 					.finally(() => sendResponse({ status: "ok" }));
 				return true;
@@ -187,10 +190,10 @@ chrome.processes.onUpdated.addListener(async (processes: any) => {
 			await sendStats({ cpuUsage: activeProcess.cpu });
 		}
 	} catch (err) {
-		warn("STATS", "Error sending stats update:", err);
+		console.warn("[STATS]", "Error sending stats update:", err);
 	}
 });
 
 main().catch((err) => {
-	error("DARKWATT", "Background main() failed:", err);
+	console.error("[DARKWATT]", "Background main() failed:", err);
 });

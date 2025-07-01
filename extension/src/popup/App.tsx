@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback } from "react";
-import { log, error as logError } from "../utils/logger";
 import {
   getCurrentLuminanceData,
   getTotalTrackedSites,
@@ -27,7 +26,7 @@ export const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    (async function() {
+    (async () => {
       try {
         const [nits, sites] = await Promise.all([
           getCurrentLuminanceData(),
@@ -36,7 +35,7 @@ export const App: React.FC = () => {
         if (typeof nits === "number") updateState({ currentLuminance: nits });
         if (typeof sites === "number") updateState({ totalTrackedSites: sites });
       } catch (err) {
-        logError("UI", "popup init error:", err);
+        console.error("[UI]", "popup init error:", err);
       }
     })();
   }, [updateState]);
@@ -65,7 +64,7 @@ export const App: React.FC = () => {
   // @ts-ignore
   window.darkWattStateStore = { appState: state, updateState };
 
-  log("UI", "Popup render", state);
+  console.log("[UI]", "Popup render", state);
 
   return (
     <div className="min-w-[20rem] p-4 text-sm text-gray-200 bg-gray-900">

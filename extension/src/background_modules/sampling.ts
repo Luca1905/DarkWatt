@@ -1,4 +1,4 @@
-import { getCurrentTab, warn } from "../utils/logger";
+import { getCurrentTab } from "../utils/tab";
 import { average_luma_in_nits_from_data_uri } from "../wasm/wasm_mod";
 import { captureScreenshot } from "./capture";
 
@@ -23,8 +23,8 @@ export async function sampleActiveTab() {
 			url: tab.url,
 		};
 	} catch (err) {
-		warn(
-			"SAMPLE",
+		console.warn(
+			"[SAMPLE]",
 			`${new Date().toISOString()} skipped sample:`,
 			err?.toString?.(),
 		);
