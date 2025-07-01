@@ -111,7 +111,7 @@ DarkWatt is released under the MIT License – see the [LICENSE](LICENSE) file f
     - [x] get display size for energy calculation
 - [x] get CPU usage data
 - [x] store data in dxdb, expose to popup
-  - [ ] use chrome storage instead
+  - [x] use chrome storage instead
 
 - [x] remove annoying errors on installation
   - [x] error when on chrome://
@@ -123,6 +123,7 @@ DarkWatt is released under the MIT License – see the [LICENSE](LICENSE) file f
   - [x] render most current data
   - [x] render total tracked sites
   - [ ] render savings
+  - [ ] listen to storage API changes | [see here](https://developer.chrome.com/docs/extensions/reference/api/storage#use-cases)
 - [ ] settings page for custom values
 - [ ] analytics page
 - [ ] enable sample on demand

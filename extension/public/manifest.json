@@ -42,7 +42,9 @@
     "webRequest",
     "tabs",
     "processes",
-    "system.display"
+    "system.display",
+    "storage",
+    "unlimitedStorage"
   ],
   "host_permissions": [
     "<all_urls>"
