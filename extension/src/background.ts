@@ -58,7 +58,9 @@ async function sampleLoop(): Promise<void> {
 }
 
 async function main() {
-	await initWasmModule();
+	await initWasmModule({
+		module_or_path: chrome.runtime.getURL("wasm/wasm_mod_bg.wasm"),
+	});
 	await refreshDisplayInfo();
 	hello_wasm();
 	sampleLoop();
