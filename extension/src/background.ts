@@ -1,11 +1,11 @@
 import {
 	getDisplayDimensions,
 	refreshDisplayInfo,
-} from "./background_modules/display.js";
-import { sampleActiveTab as sampleTab } from "./background_modules/sampling.js";
-import { calculatePotentialSavingsMWh } from "./background_modules/savings.js";
-import { broadcastStats as sendStats } from "./background_modules/stats.js";
-import db, { type LuminanceRecord } from "./storage/storage.js";
+} from "./background_modules/display";
+import { sampleActiveTab as sampleTab } from "./background_modules/sampling";
+import { calculatePotentialSavingsMWh } from "./background_modules/savings";
+import { broadcastStats as sendStats } from "./background_modules/stats";
+import db, { type LuminanceRecord } from "./storage/storage";
 import { error, warn } from "./utils/logger";
 import initWasmModule, {
 	average_luma_in_nits,

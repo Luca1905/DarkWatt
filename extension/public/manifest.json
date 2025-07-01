@@ -33,7 +33,6 @@
 		{
 			"matches": ["<all_urls>"],
 			"resources": [
-				"utils/logger.js",
 				"wasm/wasm_mod.js",
 				"wasm/wasm_mod_bg.wasm"
 			]

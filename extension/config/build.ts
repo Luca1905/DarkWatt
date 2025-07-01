@@ -62,3 +62,5 @@ for await (const filename of glob.scan(publicFolder)) {
 }
 
 await $`cp -R ${publicFolder}/icons ${outdir}`;
+
+await $`cp -R ./src/wasm ${outdir}`
