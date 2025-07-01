@@ -19,7 +19,7 @@ const initialState: AppState = {
   displayInfo: null,
 };
 
-const App: React.FC = () => {
+export const App: React.FC = () => {
   const [state, setState] = useState<AppState>(initialState);
 
   const updateState = useCallback((updates: Partial<AppState>) => {
@@ -108,8 +108,6 @@ const App: React.FC = () => {
     </div>
   );
 };
-
-export default App;
 
 interface StatProps {
   label: string;

@@ -1,11 +1,10 @@
 {
   "name": "extension",
   "module": "index.ts",
-  "type": "module",
   "private": true,
   "scripts": {
     "build": "bun run config/build.ts",
-    "css": "tailwindcss -i",
+    "css": "postcss",
     "typecheck": "tsc --noEmit",
     "check": "biome check .",
     "check:unsafe": "biome check --write --unsafe .",
@@ -21,6 +20,8 @@
     "adm-zip": "^0.5.16",
     "tailwindcss": "^3.4.4",
     "postcss": "^8.4.35",
+    "postcss-cli": "^11.0.0",
+    "postcss-import": "^16.1.0",
     "autoprefixer": "^10.4.17"
   },
   "peerDependencies": {
