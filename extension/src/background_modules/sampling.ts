@@ -2,7 +2,7 @@ import { getCurrentTab } from "../utils/tab";
 import { average_luma_in_nits_from_data_uri } from "../wasm/wasm_mod";
 import { captureScreenshot } from "./capture";
 
-export type sample = {
+export type Sample = {
 	dataUrl: string;
 	sample: number;
 	url: string;

@@ -1,3 +1,4 @@
+import { captureScreenshot } from "./background_modules/capture";
 import {
 	getDisplayDimensions,
 	refreshDisplayInfo,
@@ -13,18 +14,6 @@ import initWasmModule, {
 } from "./wasm/wasm_mod.js";
 
 const SAMPLE_INTERVAL = 1000;
-
-async function captureScreenshot(): Promise<string> {
-	return new Promise((resolve, reject) => {
-		chrome.tabs.captureVisibleTab({ format: "png" }, (dataUrl) => {
-			if (chrome.runtime.lastError) {
-				reject(chrome.runtime.lastError);
-			} else {
-				resolve(dataUrl as string);
-			}
-		});
-	});
-}
 
 async function sampleLoop(): Promise<void> {
 	const t0 = performance.now();

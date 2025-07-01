@@ -29,7 +29,6 @@ export async function refreshDisplayInfo() {
 			console.error("[DISPLAY]", "no display connected");
 			return;
 		}
-		console.log("[DISPLAY]", "primaryDisplay:", primaryDisplay);
 		dimensions = displayLengthFromInfo(primaryDisplay);
 		console.log("[DISPLAY]", "primaryDisplay:", primaryDisplay);
 		broadcastStats({ displayInfo: dimensions });
