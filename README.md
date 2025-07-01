@@ -33,7 +33,7 @@ Pre-built `.zip` packages are attached to every GitHub release.
 2. Unzip it somewhere.
 3. Open `chrome://extensions` (or `about:debugging#/runtime/this-firefox` in Firefox).
 4. Enable "Developer mode" and click "Load unpacked".
-5. Select the extracted `build/chrome` or `build/firefox` directory.
+5. Select the extracted `build/` directory.
 
 ### 2. Build from source
 
