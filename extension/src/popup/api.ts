@@ -60,3 +60,47 @@ export async function getLuminanceAverageForDateRange(
 		);
 	});
 }
+
+export async function getAllLuminanceData(): Promise<
+	Array<{ luminance: number; url: string; date: string }>
+> {
+	return new Promise((resolve, reject) => {
+		chrome.runtime.sendMessage(
+			{ action: "get_all_luminance_data" },
+			(response) => {
+				if (chrome.runtime.lastError) {
+					console.error(
+						"[UI]",
+						"Error getting all luminance data:",
+						chrome.runtime.lastError,
+					);
+					reject(chrome.runtime.lastError);
+				} else {
+					resolve(response || []);
+				}
+			},
+		);
+	});
+}
+
+export async function getLuminanceDataForDate(
+	date: Date,
+): Promise<number | null> {
+	return new Promise((resolve, reject) => {
+		chrome.runtime.sendMessage(
+			{ action: "get_luminance_data_for_date", date: date.toISOString() },
+			(response) => {
+				if (chrome.runtime.lastError) {
+					console.error(
+						"[UI]",
+						"Error getting luminance for date:",
+						chrome.runtime.lastError,
+					);
+					reject(chrome.runtime.lastError);
+				} else {
+					resolve(response as number | null);
+				}
+			},
+		);
+	});
+}
