@@ -2,9 +2,14 @@ import { useEffect, useState, useCallback } from "react";
 import {
   getCurrentLuminanceData,
   getTotalTrackedSites,
-} from "./api"
+  getAllLuminanceData,
+  getLuminanceAverageForDateRange,
+} from "./api";
 import type { stats } from "../models/stats";
 import type { Nullable } from "../utils/types";
+import { Dashboard, TabPanel, MetricGrid, Section } from "./components/Dashboard";
+import { StatCard } from "./components/StatCard";
+import { Chart } from "./components/Chart";
 
 type AppState = { [K in keyof stats]: Nullable<stats[K]> };
 const initialState: AppState = {
@@ -18,11 +23,69 @@ const initialState: AppState = {
   displayInfo: null,
 };
 
+interface ChartData {
+  time: string;
+  luminance: number;
+  date: string;
+}
+
 export const App: React.FC = () => {
   const [state, setState] = useState<AppState>(initialState);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [chartData, setChartData] = useState<ChartData[]>([]);
+  const [weeklyAverage, setWeeklyAverage] = useState<number | null>(null);
 
   const updateState = useCallback((updates: Partial<AppState>) => {
     setState((prev) => ({ ...prev, ...updates }));
+  }, []);
+
+  const loadChartData = useCallback(async () => {
+    try {
+      const data = await getAllLuminanceData();
+      const filteredData = data.filter(record => {
+        const recordTime = new Date(record.date).getTime();
+        const now = Date.now();
+        return now - recordTime <= 24 * 60 * 60 * 1000;
+      });
+
+      const desiredPoints = 20;
+      let sampledData = [];
+      if (filteredData.length <= desiredPoints) {
+        sampledData = filteredData;
+      } else {
+        const step = filteredData.length / desiredPoints;
+        for (let i = 0; i < desiredPoints; i++) {
+          sampledData.push(filteredData[Math.floor(i * step)]);
+        }
+      }
+
+      const chartPoints = sampledData.map(record => ({
+        time: new Date(record.date).toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit'
+        }),
+        luminance: record.luminance,
+        date: record.date
+      }));
+
+      setChartData(chartPoints);
+    } catch (err) {
+      console.error("[UI]", "Error loading chart data:", err);
+    }
+  }, []);
+
+  const loadWeeklyAverage = useCallback(async () => {
+    try {
+      const now = new Date();
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const average = await getLuminanceAverageForDateRange(
+        weekAgo.getTime(),
+        now.getTime()
+      );
+      setWeeklyAverage(average);
+    } catch (err) {
+      console.error("[UI]", "Error loading weekly average:", err);
+    }
   }, []);
 
   useEffect(() => {
@@ -34,11 +97,14 @@ export const App: React.FC = () => {
         ]);
         if (typeof nits === "number") updateState({ currentLuminance: nits });
         if (typeof sites === "number") updateState({ totalTrackedSites: sites });
+        
+        // Load additional data
+        await Promise.all([loadChartData(), loadWeeklyAverage()]);
       } catch (err) {
         console.error("[UI]", "popup init error:", err);
       }
     })();
-  }, [updateState]);
+  }, [updateState, loadChartData, loadWeeklyAverage]);
 
   useEffect(() => {
     const listener: Parameters<typeof chrome.runtime.onMessage.addListener>[0] = (
@@ -48,7 +114,11 @@ export const App: React.FC = () => {
     ) => {
       switch (message.action) {
         case "stats_update":
-          if (message.stats) updateState(message.stats as Partial<AppState>);
+          if (message.stats) {
+            updateState(message.stats as Partial<AppState>);
+            // Refresh chart data when stats update
+            loadChartData();
+          }
           sendResponse(state);
           return false;
         default:
@@ -59,121 +129,216 @@ export const App: React.FC = () => {
 
     chrome.runtime.onMessage.addListener(listener);
     return () => chrome.runtime.onMessage.removeListener(listener);
-  }, [state, updateState]);
+  }, [state, updateState, loadChartData]);
 
   // @ts-ignore
   window.darkWattStateStore = { appState: state, updateState };
 
-  console.log("[UI]", "Popup render", state);
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: '📊' },
+    { id: 'analytics', label: 'Analytics', icon: '📈' },
+    { id: 'settings', label: 'Settings', icon: '⚙️' }
+  ];
+
+  const getTrend = (current: number | null, average: number | null) => {
+    if (!current || !average) return undefined;
+    const diff = current - average;
+    const percentChange = ((diff / average) * 100).toFixed(1);
+    return {
+      direction: diff > 0 ? 'up' : diff < 0 ? 'down' : 'neutral',
+      value: `${Math.abs(Number(percentChange))}%`
+    } as const;
+  };
+
+  const currentTrend = getTrend(state.currentLuminance, weeklyAverage);
 
   return (
-    <div className="w-[380px] min-h-auto max-h-[600px] overflow-y-auto m-0 p-4 font-sans bg-gradient-to-br from-[#1a1a1a] to-[#2d2d2d] text-white transition-all duration-300 ease-in-out">
-      {/* Header */}
-      <div className="text-center mb-6 animate-[fadeInDown_0.6s_ease-out]">
-        <div className="text-2xl font-bold text-green-400 mb-2 transition-all duration-300 ease-in-out cursor-default hover:scale-105 hover:text-green-500">
-          ⚡ DarkWatt
+    <div className="w-[400px] h-[600px] flex flex-col m-0 font-sans bg-gradient-to-br from-[#0f0f0f] via-[#1a1a1a] to-[#2d2d2d] text-white">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-10 bg-gradient-to-br from-[#0f0f0f] via-[#1a1a1a] to-[#2d2d2d] border-b border-white/10 backdrop-blur-sm">
+        <div className="p-4 pb-3">
+          <div className="text-center mb-4 animate-[fadeInDown_0.6s_ease-out]">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <img src="icons/icon256.png" alt="DarkWatt" className="w-8 h-8" />
+              <div>
+                <h1 className="text-xl font-bold text-white">DarkWatt</h1>
+                <p className="text-xs text-neutral-400">Energy Tracker</p>
+              </div>
+            </div>
+            
+            {/* Status Indicator */}
+            <div className="flex items-center justify-center gap-2 bg-green-400/10 rounded-full px-3 py-1.5 border border-green-400/20">
+                         <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+              <span className="text-xs text-green-400 font-medium">Active Monitoring</span>
+            </div>
+          </div>
+
+          {/* Sticky Tab Navigation */}
+          <div className="flex bg-white/5 rounded-lg p-1 border border-white/10">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                  activeTab === tab.id
+                    ? 'bg-green-400/20 text-green-400 shadow-sm border border-green-400/30'
+                    : 'text-neutral-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                {tab.icon && <span className="text-base">{tab.icon}</span>}
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
-        <p className="text-sm text-neutral-400 m-0 transition-colors duration-300 ease-in-out">
-          Dark Mode Energy Tracker
-        </p>
       </div>
 
-      {/* Power Indicator */}
-      <button 
-        type="button"
-        className="flex items-center justify-center bg-gradient-to-br from-green-400/15 to-green-500/10 rounded-xl p-4 mb-5 border border-green-400/20 cursor-pointer transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] relative overflow-hidden hover:bg-gradient-to-br hover:from-green-400/25 hover:to-green-500/15 hover:border-green-400/40 hover:-translate-y-1 hover:scale-[1.02] hover:shadow-[0_10px_30px_rgba(74,222,128,0.2)] active:-translate-y-0.5 active:scale-[0.98] focus:outline-2 focus:outline-green-400 focus:outline-offset-2 animate-[fadeInUp_0.6s_ease-out_0.1s_both] before:content-[''] before:absolute before:top-0 before:-left-full before:w-full before:h-full before:bg-gradient-to-r before:from-transparent before:via-white/10 before:to-transparent before:transition-all before:duration-600 before:ease-in-out hover:before:left-full w-full"
-        aria-label="Power tracking status"
-      >
-        <svg 
-          className="w-[22px] h-[22px] mr-2.5 fill-green-400 transition-all duration-300 ease-in-out drop-shadow-[0_0_4px_rgba(74,222,128,0.3)] hover:fill-green-500 hover:rotate-[15deg] hover:scale-110 hover:drop-shadow-[0_0_8px_rgba(74,222,128,0.5)] animate-[pulse_2s_infinite]" 
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-        </svg>
-        <span className="text-sm text-green-400 font-medium transition-all duration-300 ease-in-out text-shadow-[0_0_4px_rgba(74,222,128,0.2)] hover:text-green-500 hover:text-shadow-[0_0_8px_rgba(74,222,128,0.4)]">
-          Tracking Power Savings
-        </span>
-      </button>
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-4 pt-2">
+          <TabPanel value="overview" activeTab={activeTab}>
+            <Section title="Real-time Metrics" icon="⚡">
+              <MetricGrid columns={2} gap="md">
+                <StatCard
+                  title="Current Luminance"
+                  value={state.currentLuminance ?? '--'}
+                  unit="nits"
+                  icon="💡"
+                  isLoading={state.currentLuminance === null}
+                  trend={currentTrend?.direction}
+                  trendValue={currentTrend?.value}
+                  size="lg"
+                  className="col-span-2"
+                />
+                <StatCard
+                  title="Potential Savings"
+                  value={state.potentialSavingMWh ?? '--'}
+                  unit="mWh"
+                  icon="💚"
+                  isLoading={state.potentialSavingMWh === null}
+                />
+                <StatCard
+                  title="CPU Usage"
+                  value={state.cpuUsage ?? '--'}
+                  unit="%"
+                  icon="🖥️"
+                  isLoading={state.cpuUsage === null}
+                />
+              </MetricGrid>
+            </Section>
 
-      {/* Stats Container */}
-      <div className="bg-white/5 rounded-xl p-4 mb-4 border border-white/10 backdrop-blur-[10px] transition-all duration-300 ease-in-out animate-[fadeInUp_0.6s_ease-out_0.2s_both] grid grid-cols-2 gap-y-3 gap-x-4 hover:bg-white/8 hover:border-green-400/30 hover:-translate-y-0.5 hover:shadow-[0_8px_25px_rgba(0,0,0,0.3)]">
-        <StatItem
-          label="Current Luminance"
-          value={formatNumber(state.currentLuminance, "nits", 2)}
-          isLoading={state.currentLuminance === null}
-        />
-        <StatItem
-          label="Today's Savings"
-          value={formatNumber(state.todaySavings, "mWh")}
-          isLoading={state.todaySavings === null}
-        />
-        <StatItem
-          label="This Week"
-          value={formatNumber(state.weekSavings, "mWh")}
-          isLoading={state.weekSavings === null}
-        />
-        <StatItem
-          label="Total Saved"
-          value={formatNumber(state.totalSavings, "mWh")}
-          isLoading={state.totalSavings === null}
-        />
-        <StatItem
-          label="Total tracked websites"
-          value={
-            typeof state.totalTrackedSites === "number"
-              ? `${state.totalTrackedSites}`
-              : "--"
-          }
-          isLoading={state.totalTrackedSites === null}
-        />
-        <StatItem
-          label="Potential Savings (1h)"
-          value={formatNumber(state.potentialSavingMWh, "mWh")}
-          isLoading={state.potentialSavingMWh === null}
-        />
-        <StatItem
-          label="CPU Usage (tab)"
-          value={formatNumber(state.cpuUsage, "%")}
-          isLoading={state.cpuUsage === null}
-          className="col-span-1"
-        />
+            <Section title="Energy Savings" icon="🌱">
+              <MetricGrid columns={3} gap="sm">
+                <StatCard
+                  title="Today"
+                  value={state.todaySavings ?? '--'}
+                  unit="mWh"
+                  isLoading={state.todaySavings === null}
+                  size="sm"
+                />
+                <StatCard
+                  title="This Week"
+                  value={state.weekSavings ?? '--'}
+                  unit="mWh"
+                  isLoading={state.weekSavings === null}
+                  size="sm"
+                />
+                <StatCard
+                  title="Total"
+                  value={state.totalSavings ?? '--'}
+                  unit="mWh"
+                  isLoading={state.totalSavings === null}
+                  size="sm"
+                />
+              </MetricGrid>
+            </Section>
+
+            <Section title="Activity" icon="📍">
+              <StatCard
+                title="Tracked Websites"
+                value={state.totalTrackedSites ?? '--'}
+                icon="🌐"
+                isLoading={state.totalTrackedSites === null}
+                size="md"
+              />
+            </Section>
+          </TabPanel>
+
+          <TabPanel value="analytics" activeTab={activeTab}>
+            <Section 
+              title="Luminance Trends" 
+              subtitle="Last 24 hours"
+              icon="📈"
+            >
+              <Chart data={chartData} height={180} type="area" />
+            </Section>
+
+            <Section title="Weekly Summary" icon="📅">
+              <MetricGrid columns={2} gap="md">
+                <StatCard
+                  title="Weekly Average"
+                  value={weeklyAverage ?? '--'}
+                  unit="nits"
+                  icon="📊"
+                  isLoading={weeklyAverage === null}
+                />
+                <StatCard
+                  title="Data Points"
+                  value={chartData.length}
+                  icon="🔢"
+                />
+              </MetricGrid>
+            </Section>
+
+            <Section title="Environmental Impact" icon="🌍">
+              <div className="bg-gradient-to-r from-green-400/10 to-blue-400/10 rounded-xl p-3 border border-green-400/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-lg">🌱</span>
+                  <div>
+                    <h3 className="text-sm font-semibold text-white">Carbon Footprint</h3>
+                    <p className="text-xs text-neutral-400">Estimated CO₂ reduction</p>
+                  </div>
+                </div>
+                <div className="text-xl font-bold text-green-400">
+                  {state.totalSavings ? (state.totalSavings * 0.0005).toFixed(3) : '--'} kg CO₂
+                </div>
+              </div>
+            </Section>
+          </TabPanel>
+
+          <TabPanel value="settings" activeTab={activeTab}>
+            <Section title="Display Information" icon="🖥️">
+              <div className="bg-white/5 rounded-xl p-3 border border-white/10">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <span className="text-xs text-neutral-400">Width</span>
+                    <div className="text-sm font-semibold text-white">
+                      {state.displayInfo?.width?.toFixed(1) ?? '--'} inches
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-xs text-neutral-400">Height</span>
+                    <div className="text-sm font-semibold text-white">
+                      {state.displayInfo?.height?.toFixed(1) ?? '--'} inches
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Section>
+
+            <Section title="About" icon="ℹ️">
+              <div className="bg-white/5 rounded-xl p-3 border border-white/10">
+                <p className="text-xs text-neutral-300 leading-relaxed">
+                  DarkWatt monitors your screen's luminance and calculates potential energy savings 
+                  from using dark mode. The extension tracks your browsing patterns and provides 
+                  insights into your environmental impact.
+                </p>
+              </div>
+            </Section>
+          </TabPanel>
+        </div>
       </div>
     </div>
   );
-};
-
-interface StatItemProps {
-  label: string;
-  value: string;
-  isLoading?: boolean;
-  className?: string;
-}
-
-const StatItem: React.FC<StatItemProps> = ({ label, value, isLoading = false, className = "" }) => (
-  <div className={`flex flex-col items-start gap-0.5 py-1 rounded-md transition-all duration-200 ease-in-out hover:bg-white/5 hover:px-2 ${className}`}>
-    <span className="text-sm text-neutral-300 transition-colors duration-200 ease-in-out group-hover:text-white">
-      {label}
-    </span>
-    <span 
-      className={`text-lg font-semibold text-green-400 transition-all duration-200 ease-in-out relative after:content-[''] after:absolute after:-bottom-0.5 after:left-0 after:w-0 after:h-0.5 after:bg-gradient-to-r after:from-green-400 after:to-green-500 after:transition-all after:duration-300 after:ease-in-out hover:after:w-full ${
-        isLoading 
-          ? 'bg-gradient-to-r from-green-400 via-green-500 to-green-400 bg-[length:200%_100%] animate-[shimmer_2s_infinite] bg-clip-text text-transparent' 
-          : ''
-      }`}
-    >
-      {value}
-    </span>
-  </div>
-);
-
-function formatNumber(
-  value: number | null,
-  unit: string,
-  fractionDigits = 1,
-): string {
-  if (typeof value === "number") {
-    return `${value.toFixed(fractionDigits)} ${unit}`;
-  }
-  return `-- ${unit}`;
-} 
+}; 
