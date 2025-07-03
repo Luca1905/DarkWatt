@@ -39,12 +39,16 @@ export async function getTotalTrackedSites(): Promise<number | null> {
 }
 
 export async function getLuminanceAverageForDateRange(
-	startDate: number,
-	endDate: number,
+	startDate: Date,
+	endDate: Date,
 ): Promise<number | null> {
 	return new Promise((resolve, reject) => {
 		chrome.runtime.sendMessage(
-			{ action: "get_luminance_data_for_date_range", startDate, endDate },
+			{
+				action: "get_luminance_average_for_date_range",
+				startDate: startDate.toISOString(),
+				endDate: endDate.toISOString(),
+			},
 			(response) => {
 				if (chrome.runtime.lastError) {
 					console.error(

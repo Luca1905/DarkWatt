@@ -110,11 +110,10 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 			return true;
 		}
 
-		case "get_luminance_data_for_date_range": {
-			db.QUERIES.getLuminanceAverageForDateRange(
-				request.startDate,
-				request.endDate,
-			)
+		case "get_luminance_average_for_date_range": {
+			const start = new Date(request.startDate);
+			const end = new Date(request.endDate);
+			db.QUERIES.getLuminanceAverageForDateRange(start, end)
 				.then((data: unknown) => sendResponse(data))
 				.catch((err: unknown) => {
 					console.error("[DB]", "Error fetching luminance data:", err);

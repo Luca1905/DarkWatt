@@ -23,12 +23,6 @@ const initialState: AppState = {
   displayInfo: null,
 };
 
-interface ChartData {
-  time: string;
-  luminance: number;
-  date: string;
-}
-
 export const App: React.FC = () => {
   const [state, setState] = useState<AppState>(initialState);
   const [activeTab, setActiveTab] = useState('overview');
@@ -79,8 +73,8 @@ export const App: React.FC = () => {
       const now = new Date();
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       const average = await getLuminanceAverageForDateRange(
-        weekAgo.getTime(),
-        now.getTime()
+        weekAgo,
+        now,
       );
       setWeeklyAverage(average);
     } catch (err) {
