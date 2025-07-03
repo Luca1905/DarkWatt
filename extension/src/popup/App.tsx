@@ -9,7 +9,7 @@ import type { stats } from "../models/stats";
 import type { Nullable } from "../utils/types";
 import { Dashboard, TabPanel, MetricGrid, Section } from "./components/Dashboard";
 import { StatCard } from "./components/StatCard";
-import { Chart } from "./components/Chart";
+import { ChartAreaInteractive, type ChartData } from "@/components/ui/chart-area-interactive";
 
 type AppState = { [K in keyof stats]: Nullable<stats[K]> };
 const initialState: AppState = {
@@ -97,7 +97,7 @@ export const App: React.FC = () => {
         ]);
         if (typeof nits === "number") updateState({ currentLuminance: nits });
         if (typeof sites === "number") updateState({ totalTrackedSites: sites });
-        
+
         // Load additional data
         await Promise.all([loadChartData(), loadWeeklyAverage()]);
       } catch (err) {
@@ -165,10 +165,10 @@ export const App: React.FC = () => {
                 <p className="text-xs text-neutral-400">Energy Tracker</p>
               </div>
             </div>
-            
+
             {/* Status Indicator */}
             <div className="flex items-center justify-center gap-2 bg-green-400/10 rounded-full px-3 py-1.5 border border-green-400/20">
-                         <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+              <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
               <span className="text-xs text-green-400 font-medium">Active Monitoring</span>
             </div>
           </div>
@@ -180,11 +180,10 @@ export const App: React.FC = () => {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                  activeTab === tab.id
-                    ? 'bg-green-400/20 text-green-400 shadow-xs border border-green-400/30'
-                    : 'text-neutral-400 hover:text-white hover:bg-white/5'
-                }`}
+                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${activeTab === tab.id
+                  ? 'bg-green-400/20 text-green-400 shadow-xs border border-green-400/30'
+                  : 'text-neutral-400 hover:text-white hover:bg-white/5'
+                  }`}
               >
                 {tab.icon && <span className="text-base">{tab.icon}</span>}
                 <span>{tab.label}</span>
@@ -266,12 +265,12 @@ export const App: React.FC = () => {
           </TabPanel>
 
           <TabPanel value="analytics" activeTab={activeTab}>
-            <Section 
-              title="Luminance Trends" 
+            <Section
+              title="Luminance Trends"
               subtitle="Last 24 hours"
               icon="📈"
             >
-              <Chart data={chartData} height={180} type="area" />
+              <ChartAreaInteractive chartData={chartData} />
             </Section>
 
             <Section title="Weekly Summary" icon="📅">
@@ -330,8 +329,8 @@ export const App: React.FC = () => {
             <Section title="About" icon="ℹ️">
               <div className="bg-white/5 rounded-xl p-3 border border-white/10">
                 <p className="text-xs text-neutral-300 leading-relaxed">
-                  DarkWatt monitors your screen's luminance and calculates potential energy savings 
-                  from using dark mode. The extension tracks your browsing patterns and provides 
+                  DarkWatt monitors your screen's luminance and calculates potential energy savings
+                  from using dark mode. The extension tracks your browsing patterns and provides
                   insights into your environmental impact.
                 </p>
               </div>
