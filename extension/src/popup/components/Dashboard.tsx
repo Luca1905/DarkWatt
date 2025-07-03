@@ -32,7 +32,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             className={clsx(
               'flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200',
               activeTab === tab.id
-                ? 'bg-green-400/20 text-green-400 shadow-sm border border-green-400/30'
+                ? 'bg-green-400/20 text-green-400 shadow-xs border border-green-400/30'
                 : 'text-neutral-400 hover:text-white hover:bg-white/5'
             )}
           >

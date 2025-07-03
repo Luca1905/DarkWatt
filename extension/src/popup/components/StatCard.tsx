@@ -68,7 +68,7 @@ export const StatCard: React.FC<StatCardProps> = ({
 
   return (
     <div className={clsx(
-      'bg-white/5 rounded-xl border border-white/10 backdrop-blur-sm transition-all duration-300 ease-in-out',
+      'bg-white/5 rounded-xl border border-white/10 backdrop-blur-xs transition-all duration-300 ease-in-out',
       'hover:bg-white/8 hover:border-green-400/30 hover:-translate-y-1 hover:shadow-lg hover:shadow-green-400/10',
       'group cursor-default',
       sizeClasses[size],
@@ -103,7 +103,7 @@ export const StatCard: React.FC<StatCardProps> = ({
         <span className={clsx(
           'font-bold text-green-400 transition-all duration-300 group-hover:text-green-300',
           valueSizeClasses[size],
-          isLoading && 'animate-pulse bg-gradient-to-r from-green-400 via-green-500 to-green-400 bg-clip-text text-transparent bg-[length:200%_100%] animate-[shimmer_2s_infinite]'
+          isLoading && 'animate-pulse bg-linear-to-r from-green-400 via-green-500 to-green-400 bg-clip-text text-transparent bg-size-[200%_100%] animate-shimmer'
         )}>
           {formatValue()}
         </span>
