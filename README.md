@@ -3,7 +3,6 @@
 DarkWatt is a browser extension that helps you track the energy comsumption of your screen. It captures a down-scaled screenshot of the current tab (locally of course), computes the average luminance, and adds it with CPU usage statistics by the browser. The resulting data is persisted locally so you can find the sites that are the most battery-friendly.
 
 ## Features
-
 * Real-time measurement of page luminance (in nits).
 * Tracks per-tab CPU time (requires the experimental `chrome.processes` API).
 * Cross-browser packaging (Chromium & Firefox Nightly).
@@ -106,7 +105,6 @@ DarkWatt is released under the MIT License – see the [LICENSE](LICENSE) file f
   - [ ] implement savings logic
     - [x] heuristic function for light mode page into dark mode page
     - [ ] heuristic function for detecting light e.g. dark mode page
-      - [ ] BUG: youtube not detected as light
     - [ ] calculating energy saving from nits saved.
     - [x] get display size for energy calculation
 - [x] get CPU usage data
@@ -136,3 +134,6 @@ DarkWatt is released under the MIT License – see the [LICENSE](LICENSE) file f
 - [ ] fix assumptions
   - [ ] assumed screen max brightness
 
+### BUGS:
+- [ ] content script: youtube not detected as light
+- [ ] popup: chart x-axis wrong, too much data
