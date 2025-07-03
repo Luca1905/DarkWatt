@@ -125,7 +125,7 @@
 @theme {
   --animate-fade-in-down: fadeInDown 0.6s ease-out;
   --animate-fade-in-up: fadeInUp 0.6s ease-out;
-  --animate-fade-in: fadeIn 0.6s ease-out;
+  --animate-fade-in: fadeIn 0.4s ease-out;
   --animate-pulse: pulse 2s infinite;
   --animate-shimmer: shimmer 2s infinite;
 
@@ -160,10 +160,10 @@
   @keyframes pulse {
     0%,
     100% {
-      transform: scale(1);
+      opacity: 1;
     }
     50% {
-      transform: scale(1.05);
+      opacity: 0.5;
     }
   }
   @keyframes shimmer {
@@ -191,14 +191,16 @@
   ::backdrop,
   ::file-selector-button {
     border-color: var(--color-gray-200, currentcolor);
-  },
+  }
+  
   :root {
       --chart-1: oklch(0.646 0.222 41.116);
       --chart-2: oklch(0.6 0.118 184.704);
       --chart-3: oklch(0.398 0.07 227.392);
       --chart-4: oklch(0.828 0.189 84.429);
       --chart-5: oklch(0.769 0.188 70.08);
-  }, 
+  }
+  
   .dark {
     --chart-1: oklch(0.488 0.243 264.376);
     --chart-2: oklch(0.696 0.17 162.48);
