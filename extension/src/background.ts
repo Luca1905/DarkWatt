@@ -57,7 +57,7 @@ async function main() {
 
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 	switch (request.action) {
-		case "average_luma": {
+		case "average_luma_relative": {
 			try {
 				const data = new Uint8Array(request.data);
 				const result = average_luma_relative(data);

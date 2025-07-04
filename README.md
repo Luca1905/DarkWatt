@@ -104,7 +104,9 @@ DarkWatt is released under the MIT License – see the [LICENSE](LICENSE) file f
   - [x] set up message connections to get and save luma data
   - [ ] implement savings logic
     - [x] heuristic function for light mode page into dark mode page
-    - [ ] heuristic function for detecting light e.g. dark mode page
+    - [x] heuristic function for detecting light e.g. dark mode page
+        - [ ] cache seen sites, known parameter
+        - [ ] render onChange
     - [ ] calculating energy saving from nits saved.
     - [x] get display size for energy calculation
 - [x] get CPU usage data
@@ -135,5 +137,5 @@ DarkWatt is released under the MIT License – see the [LICENSE](LICENSE) file f
   - [ ] assumed screen max brightness
 
 ### BUGS:
-- [ ] content script: youtube not detected as light
+- [x] content script: youtube not detected as light
 - [ ] popup: chart x-axis wrong, too much data

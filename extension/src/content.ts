@@ -1,4 +1,4 @@
-import { detectPageTheme } from "./utils/theme";
+import { isDark } from "@/utils/theme-detector";
 
 const sendBackgroundMessage = (
 	action: string,
@@ -12,9 +12,9 @@ const sendBackgroundMessage = (
 };
 
 const init = (): void => {
-	const mode = detectPageTheme();
-	console.log(`[SCRIPT] Detected page mode: ${mode}`);
-	sendBackgroundMessage("page_mode_detected", { mode });
+	const isDarkMode = isDark() ? "dark": "light";
+	console.log(`[SCRIPT] Detected page mode: ${isDarkMode}`);
+	sendBackgroundMessage("page_mode_detected", { isDarkMode });
 };
 
 const onDomReady = (cb: () => void): void => {
