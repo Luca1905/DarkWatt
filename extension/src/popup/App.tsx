@@ -140,9 +140,9 @@ export const App: React.FC = () => {
   const currentTrend = getTrend(state.currentLuminance, weeklyAverage);
 
   return (
-    <div className="w-[420px] h-[640px] bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-white overflow-hidden">
+    <div className="w-[420px] h-[640px] bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-white flex flex-col">
       {/* Header */}
-      <div className="relative bg-gradient-to-r from-slate-900/90 to-slate-800/90 backdrop-blur-sm border-b border-slate-700/50">
+      <div className="relative bg-gradient-to-r from-slate-900/90 to-slate-800/90 backdrop-blur-sm border-b border-slate-700/50 flex-shrink-0">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -189,7 +189,7 @@ export const App: React.FC = () => {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto min-h-0">
         <div className="p-6">
           {/* Dashboard Tab */}
           {activeTab === 'dashboard' && (
