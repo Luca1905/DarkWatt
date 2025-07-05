@@ -1,14 +1,17 @@
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
-  getCurrentLuminanceData,
-  getTotalTrackedSites,
-  getAllLuminanceData,
-  getLuminanceAverageForDateRange,
-} from "./api";
+  ChartAreaInteractive,
+  type ChartData,
+} from "@/components/ui/chart-area-interactive";
 import type { stats } from "../models/stats";
 import type { Nullable } from "../utils/types";
+import {
+  getAllLuminanceData,
+  getCurrentLuminanceData,
+  getLuminanceAverageForDateRange,
+  getTotalTrackedSites,
+} from "./api";
 import { StatCard } from "./components/StatCard";
-import { ChartAreaInteractive, type ChartData } from "@/components/ui/chart-area-interactive";
 
 type AppState = { [K in keyof stats]: Nullable<stats[K]> };
 const initialState: AppState = {
@@ -24,7 +27,7 @@ const initialState: AppState = {
 
 export const App: React.FC = () => {
   const [state, setState] = useState<AppState>(initialState);
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [weeklyAverage, setWeeklyAverage] = useState<number | null>(null);
 
@@ -35,7 +38,7 @@ export const App: React.FC = () => {
   const loadChartData = useCallback(async () => {
     try {
       const data = await getAllLuminanceData();
-      const filteredData = data.filter(record => {
+      const filteredData = data.filter((record) => {
         const recordTime = new Date(record.date).getTime();
         const now = Date.now();
         return now - recordTime <= 24 * 60 * 60 * 1000;
@@ -52,13 +55,13 @@ export const App: React.FC = () => {
         }
       }
 
-      const chartPoints = sampledData.map(record => ({
-        time: new Date(record.date).toLocaleTimeString('en-US', {
-          hour: '2-digit',
-          minute: '2-digit'
+      const chartPoints = sampledData.map((record) => ({
+        time: new Date(record.date).toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
         }),
         luminance: record.luminance,
-        date: record.date
+        date: record.date,
       }));
 
       setChartData(chartPoints);
@@ -71,10 +74,7 @@ export const App: React.FC = () => {
     try {
       const now = new Date();
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const average = await getLuminanceAverageForDateRange(
-        weekAgo,
-        now,
-      );
+      const average = await getLuminanceAverageForDateRange(weekAgo, now);
       setWeeklyAverage(average);
     } catch (err) {
       console.error("[UI]", "Error loading weekly average:", err);
@@ -89,7 +89,8 @@ export const App: React.FC = () => {
           getTotalTrackedSites(),
         ]);
         if (typeof nits === "number") updateState({ currentLuminance: nits });
-        if (typeof sites === "number") updateState({ totalTrackedSites: sites });
+        if (typeof sites === "number")
+          updateState({ totalTrackedSites: sites });
 
         // Load additional data
         await Promise.all([loadChartData(), loadWeeklyAverage()]);
@@ -100,25 +101,22 @@ export const App: React.FC = () => {
   }, [updateState, loadChartData, loadWeeklyAverage]);
 
   useEffect(() => {
-    const listener: Parameters<typeof chrome.runtime.onMessage.addListener>[0] = (
-      message,
-      _sender,
-      sendResponse,
-    ) => {
-      switch (message.action) {
-        case "stats_update":
-          if (message.stats) {
-            updateState(message.stats as Partial<AppState>);
-            // Refresh chart data when stats update
-            loadChartData();
-          }
-          sendResponse(state);
-          return false;
-        default:
-          sendResponse(null);
-          return false;
-      }
-    };
+    const listener: Parameters<typeof chrome.runtime.onMessage.addListener>[0] =
+      (message, _sender, sendResponse) => {
+        switch (message.action) {
+          case "stats_update":
+            if (message.stats) {
+              updateState(message.stats as Partial<AppState>);
+              // Refresh chart data when stats update
+              loadChartData();
+            }
+            sendResponse(state);
+            return false;
+          default:
+            sendResponse(null);
+            return false;
+        }
+      };
 
     chrome.runtime.onMessage.addListener(listener);
     return () => chrome.runtime.onMessage.removeListener(listener);
@@ -132,8 +130,8 @@ export const App: React.FC = () => {
     const diff = current - average;
     const percentChange = ((diff / average) * 100).toFixed(1);
     return {
-      direction: diff > 0 ? 'up' : diff < 0 ? 'down' : 'neutral',
-      value: `${Math.abs(Number(percentChange))}%`
+      direction: diff > 0 ? "up" : diff < 0 ? "down" : "neutral",
+      value: `${Math.abs(Number(percentChange))}%`,
     } as const;
   };
 
@@ -147,7 +145,11 @@ export const App: React.FC = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="relative">
-                <img src="icons/icon48.png" alt="DarkWatt" className="w-10 h-10 rounded-lg" />
+                <img
+                  src="icons/icon48.png"
+                  alt="DarkWatt"
+                  className="w-10 h-10 rounded-lg"
+                />
                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50" />
               </div>
               <div>
@@ -166,9 +168,9 @@ export const App: React.FC = () => {
         <div className="px-6 pb-4">
           <div className="flex bg-slate-800/50 rounded-xl p-1 border border-slate-700/50">
             {[
-              { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-              { id: 'analytics', label: 'Analytics', icon: '📈' },
-              { id: 'settings', label: 'Settings', icon: '⚙️' }
+              { id: "dashboard", label: "Dashboard", icon: "📊" },
+              { id: "analytics", label: "Analytics", icon: "📈" },
+              { id: "settings", label: "Settings", icon: "⚙️" },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -176,8 +178,8 @@ export const App: React.FC = () => {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                   activeTab === tab.id
-                    ? 'bg-green-400/20 text-green-400 shadow-lg shadow-green-400/10 border border-green-400/30'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                    ? "bg-green-400/20 text-green-400 shadow-lg shadow-green-400/10 border border-green-400/30"
+                    : "text-slate-400 hover:text-white hover:bg-slate-700/50"
                 }`}
               >
                 <span className="text-base">{tab.icon}</span>
@@ -192,7 +194,7 @@ export const App: React.FC = () => {
       <div className="flex-1 overflow-y-auto min-h-0">
         <div className="p-6">
           {/* Dashboard Tab */}
-          {activeTab === 'dashboard' && (
+          {activeTab === "dashboard" && (
             <div className="space-y-6 animate-[fadeIn_0.4s_ease-out]">
               {/* Primary Metrics */}
               <div>
@@ -203,7 +205,7 @@ export const App: React.FC = () => {
                 <div className="grid grid-cols-1 gap-4">
                   <StatCard
                     title="Current Screen Luminance"
-                    value={state.currentLuminance ?? '--'}
+                    value={state.currentLuminance ?? "--"}
                     unit="nits"
                     icon="💡"
                     isLoading={state.currentLuminance === null}
@@ -214,7 +216,7 @@ export const App: React.FC = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <StatCard
                       title="Potential Savings"
-                      value={state.potentialSavingMWh ?? '--'}
+                      value={state.potentialSavingMWh ?? "--"}
                       unit="mWh"
                       icon="💚"
                       isLoading={state.potentialSavingMWh === null}
@@ -222,7 +224,7 @@ export const App: React.FC = () => {
                     />
                     <StatCard
                       title="CPU Usage"
-                      value={state.cpuUsage ?? '--'}
+                      value={state.cpuUsage ?? "--"}
                       unit="%"
                       icon="🖥️"
                       isLoading={state.cpuUsage === null}
@@ -241,21 +243,21 @@ export const App: React.FC = () => {
                 <div className="grid grid-cols-3 gap-3">
                   <StatCard
                     title="Today"
-                    value={state.todaySavings ?? '--'}
+                    value={state.todaySavings ?? "--"}
                     unit="mWh"
                     isLoading={state.todaySavings === null}
                     size="sm"
                   />
                   <StatCard
                     title="This Week"
-                    value={state.weekSavings ?? '--'}
+                    value={state.weekSavings ?? "--"}
                     unit="mWh"
                     isLoading={state.weekSavings === null}
                     size="sm"
                   />
                   <StatCard
                     title="Total"
-                    value={state.totalSavings ?? '--'}
+                    value={state.totalSavings ?? "--"}
                     unit="mWh"
                     isLoading={state.totalSavings === null}
                     size="sm"
@@ -272,14 +274,14 @@ export const App: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <StatCard
                     title="Tracked Websites"
-                    value={state.totalTrackedSites ?? '--'}
+                    value={state.totalTrackedSites ?? "--"}
                     icon="🌐"
                     isLoading={state.totalTrackedSites === null}
                     size="md"
                   />
                   <StatCard
                     title="Weekly Average"
-                    value={weeklyAverage ?? '--'}
+                    value={weeklyAverage ?? "--"}
                     unit="nits"
                     icon="📊"
                     isLoading={weeklyAverage === null}
@@ -291,7 +293,7 @@ export const App: React.FC = () => {
           )}
 
           {/* Analytics Tab */}
-          {activeTab === 'analytics' && (
+          {activeTab === "analytics" && (
             <div className="space-y-6 animate-[fadeIn_0.4s_ease-out]">
               {/* Chart Section */}
               <div>
@@ -319,7 +321,7 @@ export const App: React.FC = () => {
                   />
                   <StatCard
                     title="Avg. Luminance"
-                    value={weeklyAverage ?? '--'}
+                    value={weeklyAverage ?? "--"}
                     unit="nits"
                     icon="📊"
                     isLoading={weeklyAverage === null}
@@ -340,12 +342,19 @@ export const App: React.FC = () => {
                       <span className="text-xl">🌱</span>
                     </div>
                     <div>
-                      <h3 className="text-base font-semibold text-white">Carbon Footprint</h3>
-                      <p className="text-sm text-slate-400">Estimated CO₂ reduction</p>
+                      <h3 className="text-base font-semibold text-white">
+                        Carbon Footprint
+                      </h3>
+                      <p className="text-sm text-slate-400">
+                        Estimated CO₂ reduction
+                      </p>
                     </div>
                   </div>
                   <div className="text-2xl font-bold text-green-400">
-                    {state.totalSavings ? (state.totalSavings * 0.0005).toFixed(3) : '--'} kg CO₂
+                    {state.totalSavings
+                      ? (state.totalSavings * 0.0005).toFixed(3)
+                      : "--"}{" "}
+                    kg CO₂
                   </div>
                   <p className="text-xs text-slate-400 mt-2">
                     Based on average energy grid carbon intensity
@@ -356,7 +365,7 @@ export const App: React.FC = () => {
           )}
 
           {/* Settings Tab */}
-          {activeTab === 'settings' && (
+          {activeTab === "settings" && (
             <div className="space-y-6 animate-[fadeIn_0.4s_ease-out]">
               {/* Display Information */}
               <div>
@@ -368,15 +377,19 @@ export const App: React.FC = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="text-center">
                       <div className="text-2xl font-bold text-green-400">
-                        {state.displayInfo?.width?.toFixed(1) ?? '--'}
+                        {state.displayInfo?.width?.toFixed(1) ?? "--"}
                       </div>
-                      <div className="text-sm text-slate-400">Width (inches)</div>
+                      <div className="text-sm text-slate-400">
+                        Width (inches)
+                      </div>
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold text-green-400">
-                        {state.displayInfo?.height?.toFixed(1) ?? '--'}
+                        {state.displayInfo?.height?.toFixed(1) ?? "--"}
                       </div>
-                      <div className="text-sm text-slate-400">Height (inches)</div>
+                      <div className="text-sm text-slate-400">
+                        Height (inches)
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -392,14 +405,18 @@ export const App: React.FC = () => {
                   <div className="flex items-center justify-between bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
                     <div className="flex items-center gap-3">
                       <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                      <span className="text-sm font-medium text-white">Monitoring Active</span>
+                      <span className="text-sm font-medium text-white">
+                        Monitoring Active
+                      </span>
                     </div>
                     <span className="text-xs text-green-400">Running</span>
                   </div>
                   <div className="flex items-center justify-between bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
                     <div className="flex items-center gap-3">
                       <div className="w-2 h-2 bg-blue-400 rounded-full" />
-                      <span className="text-sm font-medium text-white">Data Collection</span>
+                      <span className="text-sm font-medium text-white">
+                        Data Collection
+                      </span>
                     </div>
                     <span className="text-xs text-blue-400">Enabled</span>
                   </div>
@@ -414,8 +431,9 @@ export const App: React.FC = () => {
                 </h2>
                 <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
                   <p className="text-sm text-slate-300 leading-relaxed mb-3">
-                    DarkWatt monitors your screen's luminance and calculates potential energy savings
-                    from using dark mode themes and reducing screen brightness.
+                    DarkWatt monitors your screen's luminance and calculates
+                    potential energy savings from using dark mode themes and
+                    reducing screen brightness.
                   </p>
                   <div className="flex items-center gap-2 text-xs text-slate-400">
                     <span>Version 1.0.0</span>
@@ -430,4 +448,4 @@ export const App: React.FC = () => {
       </div>
     </div>
   );
-}; 
+};

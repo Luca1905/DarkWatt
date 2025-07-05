@@ -116,7 +116,7 @@ DarkWatt is released under the MIT License – see the [LICENSE](LICENSE) file f
 - [x] remove annoying errors on installation
   - [x] error when on chrome://
   - [x] exceeding MAX_CAPTURE_VISIBLE_TAB_CALLS_PER_SECOND
-- [ ] set up proper testing environment | [example](https://github.com/darkreader/darkreader/tree/main)
+- [ ] set up proper testing environment | [example](https://github.com/darkreader/darkreader/tree/main) , [karma](https://karma-runner.github.io/latest/index.html)
 
 ### Popup:
 - [x] get data from background

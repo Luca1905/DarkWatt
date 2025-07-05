@@ -1,5 +1,5 @@
-import type React from 'react';
-import { clsx } from 'clsx';
+import { clsx } from "clsx";
+import type React from "react";
 
 interface Tab {
   id: string;
@@ -18,7 +18,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   children,
   tabs,
   activeTab,
-  onTabChange
+  onTabChange,
 }) => {
   return (
     <div className="w-full">
@@ -30,10 +30,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
             type="button"
             onClick={() => onTabChange(tab.id)}
             className={clsx(
-              'flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200',
+              "flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200",
               activeTab === tab.id
-                ? 'bg-green-400/20 text-green-400 shadow-xs border border-green-400/30'
-                : 'text-neutral-400 hover:text-white hover:bg-white/5'
+                ? "bg-green-400/20 text-green-400 shadow-xs border border-green-400/30"
+                : "text-neutral-400 hover:text-white hover:bg-white/5",
             )}
           >
             {tab.icon && <span className="text-base">{tab.icon}</span>}
@@ -43,9 +43,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
       {/* Tab Content */}
-      <div className="transition-all duration-300 ease-in-out">
-        {children}
-      </div>
+      <div className="transition-all duration-300 ease-in-out">{children}</div>
     </div>
   );
 };
@@ -56,46 +54,42 @@ interface TabPanelProps {
   children: React.ReactNode;
 }
 
-export const TabPanel: React.FC<TabPanelProps> = ({ value, activeTab, children }) => {
+export const TabPanel: React.FC<TabPanelProps> = ({
+  value,
+  activeTab,
+  children,
+}) => {
   if (value !== activeTab) return null;
 
-  return (
-    <div className="animate-[fadeInUp_0.4s_ease-out]">
-      {children}
-    </div>
-  );
+  return <div className="animate-[fadeInUp_0.4s_ease-out]">{children}</div>;
 };
 
 interface MetricGridProps {
   children: React.ReactNode;
   columns?: 1 | 2 | 3 | 4;
-  gap?: 'sm' | 'md' | 'lg';
+  gap?: "sm" | "md" | "lg";
 }
 
 export const MetricGrid: React.FC<MetricGridProps> = ({
   children,
   columns = 2,
-  gap = 'md'
+  gap = "md",
 }) => {
   const gridClasses = {
-    1: 'grid-cols-1',
-    2: 'grid-cols-2',
-    3: 'grid-cols-3',
-    4: 'grid-cols-4'
+    1: "grid-cols-1",
+    2: "grid-cols-2",
+    3: "grid-cols-3",
+    4: "grid-cols-4",
   };
 
   const gapClasses = {
-    sm: 'gap-2',
-    md: 'gap-3',
-    lg: 'gap-4'
+    sm: "gap-2",
+    md: "gap-3",
+    lg: "gap-4",
   };
 
   return (
-    <div className={clsx(
-      'grid',
-      gridClasses[columns],
-      gapClasses[gap]
-    )}>
+    <div className={clsx("grid", gridClasses[columns], gapClasses[gap])}>
       {children}
     </div>
   );
@@ -114,22 +108,18 @@ export const Section: React.FC<SectionProps> = ({
   subtitle,
   icon,
   children,
-  className
+  className,
 }) => {
   return (
-    <div className={clsx('mb-4', className)}>
+    <div className={clsx("mb-4", className)}>
       <div className="flex items-center gap-2 mb-2">
-        {icon && (
-          <span className="text-lg">{icon}</span>
-        )}
+        {icon && <span className="text-lg">{icon}</span>}
         <div>
           <h2 className="text-base font-semibold text-white">{title}</h2>
-          {subtitle && (
-            <p className="text-xs text-neutral-400">{subtitle}</p>
-          )}
+          {subtitle && <p className="text-xs text-neutral-400">{subtitle}</p>}
         </div>
       </div>
       {children}
     </div>
   );
-}; 
+};
