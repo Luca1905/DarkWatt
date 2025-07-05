@@ -1,6 +1,9 @@
-import { broadcastStats } from "./stats";
-
 let dimensions: { width: number; height: number } = {
+  width: 0,
+  height: 0,
+};
+
+let workArea: { width: number; height: number } = {
   width: 0,
   height: 0,
 };
@@ -30,8 +33,8 @@ export async function refreshDisplayInfo() {
       return;
     }
     dimensions = displayLengthFromInfo(primaryDisplay);
+    workArea = primaryDisplay.workArea;
     console.log("[DISPLAY]", "primaryDisplay:", primaryDisplay);
-    broadcastStats({ displayInfo: dimensions });
   } catch (err) {
     console.error("[DISPLAY]", "Failed to fetch:", err);
   }
@@ -41,5 +44,6 @@ export function getDisplayDimensions() {
   return { ...dimensions };
 }
 
-// TODO: move to higher layer
-chrome.system.display.onDisplayChanged.addListener(refreshDisplayInfo);
+export function getDisplayWorkArea() {
+  return { ...workArea };
+}

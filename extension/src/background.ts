@@ -1,6 +1,7 @@
 import { captureScreenshot } from "./background_modules/capture";
 import {
   getDisplayDimensions,
+  getDisplayWorkArea,
   refreshDisplayInfo,
 } from "./background_modules/display";
 import { sampleActiveTab as sampleTab } from "./background_modules/sampling";
@@ -154,6 +155,16 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
       return false;
     }
 
+    case "get_display_dimensions": {
+      sendResponse(getDisplayDimensions());
+      return true;
+    }
+
+    case "get_display_work_area": {
+      sendResponse(getDisplayWorkArea());
+      return true;
+    }
+
     default:
       sendResponse(null);
       return false;
@@ -183,6 +194,8 @@ chrome.processes.onUpdated.addListener(async (processes: any) => {
     console.warn("[STATS]", "Error sending stats update:", err);
   }
 });
+
+chrome.system.display.onDisplayChanged.addListener(refreshDisplayInfo);
 
 main().catch((err) => {
   console.error("[DARKWATT]", "Background main() failed:", err);

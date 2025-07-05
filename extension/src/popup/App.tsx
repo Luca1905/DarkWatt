@@ -94,6 +94,18 @@ export const App: React.FC = () => {
 
         // Load additional data
         await Promise.all([loadChartData(), loadWeeklyAverage()]);
+
+        const [displayDimensions, displayWorkArea] = await Promise.all([
+          chrome.runtime.sendMessage({ action: "get_display_dimensions" }),
+          chrome.runtime.sendMessage({ action: "get_display_work_area" }),
+        ]);
+        if (displayDimensions)
+          updateState({
+            displayInfo: {
+              dimensions: displayDimensions,
+              workArea: displayWorkArea,
+            },
+          });
       } catch (err) {
         console.error("[UI]", "popup init error:", err);
       }
@@ -107,7 +119,6 @@ export const App: React.FC = () => {
           case "stats_update":
             if (message.stats) {
               updateState(message.stats as Partial<AppState>);
-              // Refresh chart data when stats update
               loadChartData();
             }
             sendResponse(state);
@@ -302,7 +313,7 @@ export const App: React.FC = () => {
                   Luminance Trends
                 </h2>
                 <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 overflow-hidden">
-                  <ChartAreaInteractive chartData={chartData} />
+                  <ChartAreaInteractive chartData={chartData} timeRange="30s" />
                 </div>
               </div>
 
@@ -377,18 +388,31 @@ export const App: React.FC = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="text-center">
                       <div className="text-2xl font-bold text-green-400">
-                        {state.displayInfo?.width?.toFixed(1) ?? "--"}
+                        {state.displayInfo?.dimensions?.width && state.displayInfo?.dimensions?.height
+                          ? Math.sqrt(
+                              Math.pow(state.displayInfo.dimensions.width, 2) +
+                              Math.pow(state.displayInfo.dimensions.height, 2)
+                            ).toFixed(1)
+                          : "--"}
                       </div>
                       <div className="text-sm text-slate-400">
-                        Width (inches)
+                        Diagonal (inches)
                       </div>
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold text-green-400">
-                        {state.displayInfo?.height?.toFixed(1) ?? "--"}
+                        {state.displayInfo?.dimensions?.width && state.displayInfo?.dimensions?.height
+                          ? (() => {
+                              const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
+                              const width = Math.round(state.displayInfo.dimensions.width * 10);
+                              const height = Math.round(state.displayInfo.dimensions.height * 10);
+                              const divisor = gcd(width, height);
+                              return `${width / divisor}:${height / divisor}`;
+                            })()
+                          : "--"}
                       </div>
                       <div className="text-sm text-slate-400">
-                        Height (inches)
+                        Aspect Ratio
                       </div>
                     </div>
                   </div>

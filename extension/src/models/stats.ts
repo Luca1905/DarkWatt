@@ -7,7 +7,13 @@ export interface stats {
   potentialSavingMWh: number;
   cpuUsage: number;
   displayInfo: {
-    width: number;
-    height: number;
+    dimensions: {
+      width: number;
+      height: number;
+    };
+    workArea: {
+      width: number;
+      height: number;
+    };
   };
 }

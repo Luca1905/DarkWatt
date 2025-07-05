@@ -30,35 +30,63 @@ export interface ChartData {
   luminance: number;
 }
 
+const timeRangeToMs = {
+  "30s": 30 * 1000,
+  "1m": 60 * 1000,
+  "5m": 5 * 60 * 1000,
+  "15m": 15 * 60 * 1000,
+  "30m": 30 * 60 * 1000,
+  "1h": 60 * 60 * 1000,
+  "2h": 2 * 60 * 60 * 1000,
+  "4h": 4 * 60 * 60 * 1000,
+  "8h": 8 * 60 * 60 * 1000,
+  "12h": 12 * 60 * 60 * 1000,
+  "24h": 24 * 60 * 60 * 1000,
+};
+
 export function ChartAreaInteractive({
   chartData,
+  timeRange,
 }: {
   chartData: ChartData[];
+  timeRange:
+    | "30s"
+    | "1m"
+    | "5m"
+    | "15m"
+    | "30m"
+    | "1h"
+    | "2h"
+    | "4h"
+    | "8h"
+    | "12h"
+    | "24h";
 }) {
-  const now = Date.now();
+  const latestRecordTs = chartData.length
+    ? new Date(chartData[chartData.length - 1].date).getTime()
+    : Date.now();
 
   const sorted = [...chartData].sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
   );
 
   const recent = sorted.filter(
-    (d) => now - new Date(d.date).getTime() <= 30_000,
+    (d) =>
+      latestRecordTs - new Date(d.date).getTime() <= timeRangeToMs[timeRange],
   );
 
   const displayData = (recent.length ? recent : sorted).slice(-30);
 
   const latestTs = displayData.length
     ? new Date(displayData[displayData.length - 1].date).getTime()
-    : now;
+    : latestRecordTs;
 
   return (
     <Card className="pt-0">
       <CardHeader className="flex items-center gap-2 space-y-0 border-b py-5 sm:flex-row">
         <div className="grid flex-1 gap-1">
           <CardTitle>Screen Luminance</CardTitle>
-          <CardDescription>
-            Last 30&nbsp;seconds • 1 s resolution
-          </CardDescription>
+          <CardDescription>Last {timeRange} • 1 s resolution</CardDescription>
         </div>
       </CardHeader>
       <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
@@ -90,9 +118,9 @@ export function ChartAreaInteractive({
               minTickGap={32}
               tickFormatter={(value) => {
                 const deltaSec = Math.round(
-                  (new Date(value).getTime() - latestTs) / 1000,
+                  (latestTs - new Date(value).getTime()) / 1000,
                 );
-                return deltaSec === 0 ? "now" : `${Math.abs(deltaSec)}s`;
+                return deltaSec === 0 ? "now" : `${deltaSec}s ago`;
               }}
             />
             <ChartTooltip
@@ -100,12 +128,9 @@ export function ChartAreaInteractive({
               content={
                 <ChartTooltipContent
                   labelFormatter={(value) => {
-                    const dateObj = new Date(value);
-                    return dateObj.toLocaleTimeString("en-US", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      second: "2-digit",
-                    });
+                    const ts = new Date(value).getTime();
+                    const deltaSec = Math.round((latestTs - ts) / 1000);
+                    return deltaSec === 0 ? "now" : `${deltaSec}s ago`;
                   }}
                   indicator="dot"
                 />
@@ -116,6 +141,7 @@ export function ChartAreaInteractive({
               type="monotone"
               fill="url(#fillLuma)"
               stroke="var(--color-luminance)"
+              isAnimationActive={false}
             />
           </AreaChart>
         </ChartContainer>
