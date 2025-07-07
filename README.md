@@ -112,6 +112,7 @@ DarkWatt is released under the MIT License – see the [LICENSE](LICENSE) file f
 - [x] get CPU usage data
 - [x] store data in dxdb, expose to popup
   - [x] use chrome storage instead
+    - [ ] move data querying from storage directly to UI
 
 - [x] remove annoying errors on installation
   - [x] error when on chrome://
@@ -134,9 +135,12 @@ DarkWatt is released under the MIT License – see the [LICENSE](LICENSE) file f
 - [ ] deploy
 
 
-- [ ] fix assumptions
+- [ ] fix assumptions (config)
   - [ ] assumed screen max brightness
+
+### DX:
+- [ ] make messaging typesafe | [example](https://github.com/darkreader/darkreader/blob/main/src/background/messenger.ts)
 
 ### BUGS:
 - [x] content script: youtube not detected as light
-- [ ] popup: chart x-axis wrong, too much data
+- [x] popup: chart x-axis wrong, too much data

@@ -1,6 +1,6 @@
-import type { stats } from "../models/stats.ts";
+import type { ExtensionData } from "../definitions";
 
-export async function broadcastStats(partialStats: Partial<stats>) {
+export async function broadcastStats(partialStats: Partial<ExtensionData>) {
   try {
     await chrome.runtime.sendMessage({
       action: "stats_update",
