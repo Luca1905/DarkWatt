@@ -145,3 +145,5 @@ DarkWatt is released under the MIT License – see the [LICENSE](LICENSE) file f
 - [x] content script: youtube not detected as light
 - [x] popup: chart x-axis wrong, too much data
 - [ ] ui: chart not loading new changes
+- [ ] Error handling response: TypeError: Cannot destructure property 'data' of 'object null' as it is null.
+- [ ] Uncaught (in promise) Error: Could not establish connection. Receiving end does not exist.
