@@ -10,6 +10,8 @@ const {
   background: { service_worker },
 } = manifest;
 
+const ui = "ui/index.tsx";
+
 const scripts = content_scripts.flatMap((script) => script.js);
 
 const resolveEntryPoints = (entrypoints: string[]) => {
@@ -31,7 +33,7 @@ await Bun.build({
   entrypoints: resolveEntryPoints([
     ...scripts,
     service_worker,
-    "popup/index.tsx",
+    ui,
   ]),
   outdir,
 });

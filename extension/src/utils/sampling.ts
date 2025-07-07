@@ -1,6 +1,6 @@
+import { captureScreenshot } from "@/utils/capture";
 import { getActiveTab } from "@/utils/tabs";
 import { average_luma_in_nits_from_data_uri } from "@/wasm/wasm_mod";
-import { captureScreenshot } from "@/utils/capture";
 
 export type Sample = {
   dataUrl: string;

@@ -57,4 +57,4 @@ export interface MessageBGtoUI {
   type: MessageTypeBGtoUI;
   data?: any;
   error?: Error;
-} 
+}

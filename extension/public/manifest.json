@@ -18,14 +18,14 @@
     "default_icon": {
       "256": "icons/icon256.png"
     },
-    "default_popup": "popup/index.html"
+    "default_popup": "ui/index.html"
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
   },
   "background": {
     "type": "module",
-    "service_worker": "background.js"
+    "service_worker": "background/index.js"
   },
   "content_scripts": [
     {
@@ -33,7 +33,7 @@
         "<all_urls>"
       ],
       "js": [
-        "content.js"
+        "inject/index.js"
       ],
       "run_at": "document_end"
     }
