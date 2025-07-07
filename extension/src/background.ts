@@ -1,18 +1,18 @@
 import db, { type LuminanceRecord } from "@/utils/storage";
-import { captureScreenshot } from "./background_modules/capture";
+import { captureScreenshot } from "@/utils/capture";
 import {
   getDisplayDimensions,
   getDisplayWorkArea,
   refreshDisplayInfo,
-} from "./background_modules/display";
-import { sampleActiveTab as sampleTab } from "./background_modules/sampling";
-import { calculatePotentialSavingsMWh } from "./background_modules/savings";
-import { broadcastStats as sendStats } from "./background_modules/stats";
+} from "@/utils/display";
+import { sampleActiveTab as sampleTab } from "@/utils/sampling";
+import { calculatePotentialSavingsMWh } from "@/utils/savings";
+import { broadcastStats as sendStats } from "@/utils/stats";
 import initWasmModule, {
   average_luma_in_nits,
   average_luma_relative,
   hello_wasm,
-} from "./wasm/wasm_mod.js";
+} from "@/wasm/wasm_mod.js";
 
 const SAMPLE_INTERVAL = 1000;
 

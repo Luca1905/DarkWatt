@@ -1,4 +1,4 @@
-import type { ExtensionData } from "../definitions";
+import type { ExtensionData } from "@/definitions";
 
 export async function broadcastStats(partialStats: Partial<ExtensionData>) {
   try {

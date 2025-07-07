@@ -1,7 +1,7 @@
 import {
   DisplayTech,
   estimate_saved_energy_mwh_from_data_uri,
-} from "../wasm/wasm_mod.js";
+} from "@/wasm/wasm_mod.js";
 
 export function calculatePotentialSavingsMWh(
   dataUrl: string,
