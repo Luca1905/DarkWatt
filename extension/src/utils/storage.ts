@@ -5,9 +5,13 @@ export interface LuminanceRecord {
 }
 
 const STORAGE_KEY = "luminanceRecords" as const;
+const DISPLAY_INFO_KEY = "displayInfo" as const;
 
-// In-memory cache
 let _cache: LuminanceRecord[] | null = null;
+let _displayInfoCache: {
+  dimensions: { width: number; height: number };
+  workArea: { width: number; height: number };
+} | null = null;
 
 function ensureArray(value: unknown): LuminanceRecord[] {
   if (Array.isArray(value)) {
@@ -24,10 +28,16 @@ async function getAllRecords(): Promise<LuminanceRecord[]> {
   return records;
 }
 
-chrome.storage.onChanged.addListener((changes, area) => {
-  if (area !== "local" || !(STORAGE_KEY in changes)) return;
-  _cache = ensureArray(changes[STORAGE_KEY].newValue);
-});
+async function getDisplayInfo(): Promise<{
+  dimensions: { width: number; height: number };
+  workArea: { width: number; height: number };
+} | null> {
+  if (_displayInfoCache) return _displayInfoCache;
+  const result = await chrome.storage.local.get(DISPLAY_INFO_KEY);
+  const info = result[DISPLAY_INFO_KEY] ?? null;
+  _displayInfoCache = info;
+  return info;
+}
 
 const QUERIES = {
   async getAllLuminanceData(): Promise<LuminanceRecord[]> {
@@ -68,6 +78,10 @@ const QUERIES = {
     const uniqueUrls = new Set(records.map((r) => r.url));
     return uniqueUrls.size;
   },
+
+  async getDisplayInfo() {
+    return getDisplayInfo();
+  },
 };
 
 const MUTATIONS = {
@@ -82,6 +96,14 @@ const MUTATIONS = {
     const updated = [...records, record];
     _cache = updated;
     await chrome.storage.local.set({ [STORAGE_KEY]: updated });
+  },
+
+  async saveDisplayInfo(info: {
+    dimensions: { width: number; height: number };
+    workArea: { width: number; height: number };
+  }): Promise<void> {
+    _displayInfoCache = info;
+    await chrome.storage.local.set({ [DISPLAY_INFO_KEY]: info });
   },
 };
 
