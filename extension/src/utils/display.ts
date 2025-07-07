@@ -1,3 +1,5 @@
+import db from "@/utils/storage";
+
 let dimensions: { width: number; height: number } = {
   width: 0,
   height: 0,
@@ -35,6 +37,11 @@ export async function refreshDisplayInfo() {
     dimensions = displayLengthFromInfo(primaryDisplay);
     workArea = primaryDisplay.workArea;
     console.log("[DISPLAY]", "primaryDisplay:", primaryDisplay);
+
+    await db.MUTATIONS.saveDisplayInfo({
+      dimensions,
+      workArea,
+    });
   } catch (err) {
     console.error("[DISPLAY]", "Failed to fetch:", err);
   }

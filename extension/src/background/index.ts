@@ -1,3 +1,8 @@
+import {
+  type ExtensionAdapter,
+  initMessenger,
+  reportChanges,
+} from "@/background/messenger";
 import { captureScreenshot } from "@/utils/capture";
 import {
   getDisplayDimensions,
@@ -6,8 +11,7 @@ import {
 } from "@/utils/display";
 import { sampleActiveTab as sampleTab } from "@/utils/sampling";
 import { calculatePotentialSavingsMWh } from "@/utils/savings";
-import { broadcastStats as sendStats } from "@/utils/stats";
-import db, { type LuminanceRecord } from "@/utils/storage";
+import db from "@/utils/storage";
 import initWasmModule, {
   average_luma_in_nits,
   average_luma_relative,
@@ -15,6 +19,37 @@ import initWasmModule, {
 } from "@/wasm/wasm_mod.js";
 
 const SAMPLE_INTERVAL = 1000;
+
+const messengerAdapter: ExtensionAdapter = {
+  async collect() {
+    const latest = await db.QUERIES.getLatestLuminanceData();
+    const totalTrackedSites = await db.QUERIES.getTotalTrackedSites();
+
+    const storedDisplayInfo = await db.QUERIES.getDisplayInfo();
+
+    const displayInfo = storedDisplayInfo ?? {
+      dimensions: getDisplayDimensions(),
+      workArea: getDisplayWorkArea(),
+    };
+
+    return {
+      currentLuminance: latest?.luminance ?? 0,
+      totalTrackedSites,
+      // TODO: compute these accurately once the implementation exists
+      savings: { today: 0, week: 0, total: 0 },
+      potentialSavingMWh: 0,
+      cpuUsage: 0,
+      displayInfo,
+    };
+  },
+
+  async loadConfig() {
+    // TODO
+    return Promise.resolve();
+  },
+};
+
+initMessenger(messengerAdapter);
 
 async function sampleLoop(): Promise<void> {
   const t0 = performance.now();
@@ -29,8 +64,7 @@ async function sampleLoop(): Promise<void> {
         getDisplayDimensions(),
       );
 
-      await sendStats({
-        currentLuminance: response.sample,
+      reportChanges({
         potentialSavingMWh: savingMWh,
         totalTrackedSites: await db.QUERIES.getTotalTrackedSites(),
       });
@@ -56,6 +90,7 @@ async function main() {
   sampleLoop();
 }
 
+// TODO: use the messenger instead
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   switch (request.action) {
     case "average_luma_relative": {
@@ -81,58 +116,6 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
       return false;
     }
 
-    case "get_current_luminance_data": {
-      db.QUERIES.getLatestLuminanceData()
-        .then((data: LuminanceRecord | null) => sendResponse(data))
-        .catch((err: unknown) => {
-          console.error("[DB]", "Error fetching luminance data:", err);
-          sendResponse(null);
-        });
-      return true;
-    }
-
-    case "get_all_luminance_data": {
-      db.QUERIES.getAllLuminanceData()
-        .then((data: unknown) => sendResponse(data))
-        .catch((err: unknown) => {
-          console.error("[DB]", "Error fetching luminance data:", err);
-          sendResponse(null);
-        });
-      return true;
-    }
-
-    case "get_luminance_data_for_date": {
-      db.QUERIES.getLuminanceDataForDate(request.date)
-        .then((data: unknown) => sendResponse(data))
-        .catch((err: unknown) => {
-          console.error("[DB]", "Error fetching luminance data:", err);
-          sendResponse(null);
-        });
-      return true;
-    }
-
-    case "get_luminance_average_for_date_range": {
-      const start = new Date(request.startDate);
-      const end = new Date(request.endDate);
-      db.QUERIES.getLuminanceAverageForDateRange(start, end)
-        .then((data: unknown) => sendResponse(data))
-        .catch((err: unknown) => {
-          console.error("[DB]", "Error fetching luminance data:", err);
-          sendResponse(null);
-        });
-      return true;
-    }
-
-    case "get_total_tracked_sites": {
-      db.QUERIES.getTotalTrackedSites()
-        .then((data: unknown) => sendResponse(data))
-        .catch((err: unknown) => {
-          console.error("[DB]", "Error fetching luminance data:", err);
-          sendResponse(null);
-        });
-      return true;
-    }
-
     case "page_mode_detected": {
       const currentPageMode = request.mode || "unknown";
 
@@ -143,7 +126,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
               dataUrl,
               getDisplayDimensions(),
             );
-            return sendStats({ potentialSavingMWh: savingMWh });
+            return reportChanges({ potentialSavingMWh: savingMWh });
           })
           .catch((err) => {
             console.error("[DARKWATT]", "error calculating savings:", err);
@@ -171,6 +154,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   }
 });
 
+// TODO: use the messenger instead
 // @ts-ignore – processes API is not yet in the typings
 chrome.processes.onUpdated.addListener(async (processes: any) => {
   try {
@@ -187,13 +171,14 @@ chrome.processes.onUpdated.addListener(async (processes: any) => {
     const activeProcess = processes[activeProcessId];
 
     if (activeProcess && typeof activeProcess.cpu === "number") {
-      await sendStats({ cpuUsage: activeProcess.cpu });
+      reportChanges(await messengerAdapter.collect());
     }
   } catch (err) {
     console.warn("[STATS]", "Error sending stats update:", err);
   }
 });
 
+// TODO: use the messenger instead
 chrome.system.display.onDisplayChanged.addListener(refreshDisplayInfo);
 
 main().catch((err) => {

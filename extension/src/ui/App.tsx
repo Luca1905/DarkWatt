@@ -101,6 +101,13 @@ export const App: React.FC = () => {
         updateState(data as Partial<AppState>);
         loadChartData();
         loadWeeklyAverage();
+        storage.QUERIES.getDisplayInfo()
+          .then((info) => {
+            if (info) updateState({ displayInfo: info } as Partial<AppState>);
+          })
+          .catch((err) =>
+            console.error("[UI]", "Error fetching display info:", err),
+          );
       })
       .catch((err) => {
         console.error("[UI]", "Error fetching initial data:", err);
@@ -110,6 +117,13 @@ export const App: React.FC = () => {
       updateState(data as Partial<AppState>);
       loadChartData();
       loadWeeklyAverage();
+      storage.QUERIES.getDisplayInfo()
+        .then((info) => {
+          if (info) updateState({ displayInfo: info } as Partial<AppState>);
+        })
+        .catch((err) =>
+          console.error("[UI]", "Error fetching display info:", err),
+        );
     });
 
     return () => {

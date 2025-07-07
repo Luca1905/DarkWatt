@@ -112,7 +112,7 @@ DarkWatt is released under the MIT License – see the [LICENSE](LICENSE) file f
 - [x] get CPU usage data
 - [x] store data in dxdb, expose to popup
   - [x] use chrome storage instead
-    - [ ] move data querying from storage directly to UI
+    - [x] move data querying from storage directly to UI
 
 - [x] remove annoying errors on installation
   - [x] error when on chrome://
@@ -144,3 +144,4 @@ DarkWatt is released under the MIT License – see the [LICENSE](LICENSE) file f
 ### BUGS:
 - [x] content script: youtube not detected as light
 - [x] popup: chart x-axis wrong, too much data
+- [ ] ui: chart not loading new changes
