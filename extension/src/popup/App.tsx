@@ -4,8 +4,8 @@ import {
   type ChartData,
 } from "@/components/ui/chart-area-interactive";
 import Connector from "@/popup/connect/connector";
-import type { LuminanceRecord } from "@/storage/storage";
-import storage from "@/storage/storage";
+import type { LuminanceRecord } from "@/utils/storage";
+import storage from "@/utils/storage";
 import type { ExtensionData } from "../definitions";
 import type { Nullable } from "../utils/types";
 import { StatCard } from "./components/StatCard";

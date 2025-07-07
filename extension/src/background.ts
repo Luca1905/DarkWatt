@@ -1,3 +1,4 @@
+import db, { type LuminanceRecord } from "@/utils/storage";
 import { captureScreenshot } from "./background_modules/capture";
 import {
   getDisplayDimensions,
@@ -7,7 +8,6 @@ import {
 import { sampleActiveTab as sampleTab } from "./background_modules/sampling";
 import { calculatePotentialSavingsMWh } from "./background_modules/savings";
 import { broadcastStats as sendStats } from "./background_modules/stats";
-import db, { type LuminanceRecord } from "./storage/storage";
 import initWasmModule, {
   average_luma_in_nits,
   average_luma_relative,

@@ -1,11 +1,11 @@
-import type { MessageUItoBG } from "../../definitions";
+import type { MessageUItoBG } from "@/definitions";
 import {
   type ExtensionActions,
   type ExtensionData,
   type MessageBGtoUI,
   MessageTypeBGtoUI,
   MessageTypeUItoBG,
-} from "../../definitions";
+} from "@/definitions";
 
 export default class Connector implements ExtensionActions {
   private changeSubscribers: Set<(data: ExtensionData) => void>;
