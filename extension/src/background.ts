@@ -172,7 +172,6 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 });
 
 // @ts-ignore – processes API is not yet in the typings
-// biome-ignore lint/suspicious/noExplicitAny: processes API typings missing
 chrome.processes.onUpdated.addListener(async (processes: any) => {
   try {
     const [currentTab] = await chrome.tabs.query({

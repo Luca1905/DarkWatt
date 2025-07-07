@@ -2,12 +2,16 @@ export interface ExtensionActions {
   getData(): void;
 }
 
+interface Savings {
+  today: number;
+  week: number;
+  total: number;
+}
+
 export interface ExtensionData {
   currentLuminance: number;
   totalTrackedSites: number;
-  todaySavings: number;
-  weekSavings: number;
-  totalSavings: number;
+  savings: Savings;
   potentialSavingMWh: number;
   cpuUsage: number;
   displayInfo: {
@@ -42,7 +46,7 @@ export enum MessageTypeUItoBG {
 export interface MessageUItoBG {
   type: MessageTypeUItoBG;
   data?: any;
-  error?: any;
+  error?: Error;
 }
 
 export enum MessageTypeBGtoUI {
@@ -51,5 +55,5 @@ export enum MessageTypeBGtoUI {
 export interface MessageBGtoUI {
   type: MessageTypeBGtoUI;
   data?: any;
-  error?: any;
+  error?: Error;
 }

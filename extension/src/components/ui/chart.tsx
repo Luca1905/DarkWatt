@@ -125,7 +125,6 @@ function ChartTooltipContent({
     indicator?: "line" | "dot" | "dashed";
     nameKey?: string;
     labelKey?: string;
-    // biome-ignore lint/suspicious/noExplicitAny: Recharts injects arbitrary payload objects
     payload?: any[];
     label?: unknown;
   }) {
@@ -147,7 +146,6 @@ function ChartTooltipContent({
     if (labelFormatter) {
       return (
         <div className={cn("font-medium", labelClassName)}>
-          {/* biome-ignore lint/suspicious/noExplicitAny: Recharts payload lacks strict typings */}
           {labelFormatter(value, payload as any)}
         </div>
       );
@@ -184,7 +182,6 @@ function ChartTooltipContent({
       {!nestLabel ? tooltipLabel : null}
       <div className="grid gap-1.5">
         {(payload ?? []).map((rawItem, index) => {
-          // biome-ignore lint/suspicious/noExplicitAny: Recharts payload object shape is dynamic
           const item = rawItem as any;
           const key = `${nameKey || item.name || item.dataKey || "value"}`;
           const itemConfig = getPayloadConfigFromPayload(config, item, key);
@@ -263,7 +260,6 @@ function ChartLegendContent({
   verticalAlign = "bottom",
   nameKey,
 }: React.ComponentProps<"div"> & {
-  // biome-ignore lint/suspicious/noExplicitAny: Recharts injects arbitrary payload objects
   payload?: any[];
   verticalAlign?: "top" | "bottom" | "middle";
   hideIcon?: boolean;
@@ -284,7 +280,6 @@ function ChartLegendContent({
       )}
     >
       {(payload ?? []).map((rawItem) => {
-        // biome-ignore lint/suspicious/noExplicitAny: Recharts payload object shape is dynamic
         const item = rawItem as any;
         const key = `${nameKey || item.dataKey || "value"}`;
         const itemConfig = getPayloadConfigFromPayload(config, item, key);

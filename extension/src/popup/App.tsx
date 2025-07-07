@@ -4,22 +4,33 @@ import {
   type ChartData,
 } from "@/components/ui/chart-area-interactive";
 import Connector from "@/popup/connect/connector";
+import type { LuminanceRecord } from "@/storage/storage";
+import storage from "@/storage/storage";
 import type { ExtensionData } from "../definitions";
 import type { Nullable } from "../utils/types";
 import { StatCard } from "./components/StatCard";
-import storage from "@/storage/storage";
-import type { LuminanceRecord } from "@/storage/storage";
 
 type AppState = { [K in keyof ExtensionData]: Nullable<ExtensionData[K]> };
 const initialState: AppState = {
   currentLuminance: null,
   totalTrackedSites: null,
-  todaySavings: null,
-  weekSavings: null,
-  totalSavings: null,
+  savings: {
+    today: null,
+    week: null,
+    total: null,
+  },
   potentialSavingMWh: null,
   cpuUsage: null,
-  displayInfo: null,
+  displayInfo: {
+    dimensions: {
+      width: null,
+      height: null,
+    },
+    workArea: {
+      width: null,
+      height: null,
+    },
+  },
 };
 
 export const App: React.FC = () => {
@@ -71,7 +82,10 @@ export const App: React.FC = () => {
     try {
       const now = new Date();
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const average = await storage.QUERIES.getLuminanceAverageForDateRange(weekAgo, now);
+      const average = await storage.QUERIES.getLuminanceAverageForDateRange(
+        weekAgo,
+        now,
+      );
       setWeeklyAverage(average);
     } catch (err) {
       console.error("[UI]", "Error loading weekly average:", err);
@@ -101,7 +115,6 @@ export const App: React.FC = () => {
     return () => {
       connector.disconnect();
     };
-
   }, [updateState, loadChartData, loadWeeklyAverage]);
 
   // @ts-ignore
@@ -158,10 +171,11 @@ export const App: React.FC = () => {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === tab.id
-                  ? "bg-green-400/20 text-green-400 shadow-lg shadow-green-400/10 border border-green-400/30"
-                  : "text-slate-400 hover:text-white hover:bg-slate-700/50"
-                  }`}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  activeTab === tab.id
+                    ? "bg-green-400/20 text-green-400 shadow-lg shadow-green-400/10 border border-green-400/30"
+                    : "text-slate-400 hover:text-white hover:bg-slate-700/50"
+                }`}
               >
                 <span className="text-base">{tab.icon}</span>
                 <span>{tab.label}</span>
@@ -224,23 +238,23 @@ export const App: React.FC = () => {
                 <div className="grid grid-cols-3 gap-3">
                   <StatCard
                     title="Today"
-                    value={state.todaySavings ?? "--"}
+                    value={state.savings.today ?? "--"}
                     unit="mWh"
-                    isLoading={state.todaySavings === null}
+                    isLoading={state.savings.today === null}
                     size="sm"
                   />
                   <StatCard
                     title="This Week"
-                    value={state.weekSavings ?? "--"}
+                    value={state.savings.week ?? "--"}
                     unit="mWh"
-                    isLoading={state.weekSavings === null}
+                    isLoading={state.savings.week === null}
                     size="sm"
                   />
                   <StatCard
                     title="Total"
-                    value={state.totalSavings ?? "--"}
+                    value={state.savings.total ?? "--"}
                     unit="mWh"
-                    isLoading={state.totalSavings === null}
+                    isLoading={state.savings.total === null}
                     size="sm"
                   />
                 </div>
@@ -332,8 +346,8 @@ export const App: React.FC = () => {
                     </div>
                   </div>
                   <div className="text-2xl font-bold text-green-400">
-                    {state.totalSavings
-                      ? (state.totalSavings * 0.0005).toFixed(3)
+                    {state.savings.total
+                      ? (state.savings.total * 0.0005).toFixed(3)
                       : "--"}{" "}
                     kg CO₂
                   </div>
@@ -359,11 +373,11 @@ export const App: React.FC = () => {
                     <div className="text-center">
                       <div className="text-2xl font-bold text-green-400">
                         {state.displayInfo?.dimensions?.width &&
-                          state.displayInfo?.dimensions?.height
+                        state.displayInfo?.dimensions?.height
                           ? Math.sqrt(
-                            state.displayInfo.dimensions.width ** 2 +
-                            state.displayInfo.dimensions.height ** 2,
-                          ).toFixed(1)
+                              state.displayInfo.dimensions.width ** 2 +
+                                state.displayInfo.dimensions.height ** 2,
+                            ).toFixed(1)
                           : "--"}
                       </div>
                       <div className="text-sm text-slate-400">
@@ -373,19 +387,19 @@ export const App: React.FC = () => {
                     <div className="text-center">
                       <div className="text-2xl font-bold text-green-400">
                         {state.displayInfo?.dimensions?.width &&
-                          state.displayInfo?.dimensions?.height
+                        state.displayInfo?.dimensions?.height
                           ? (() => {
-                            const gcd = (a: number, b: number): number =>
-                              b === 0 ? a : gcd(b, a % b);
-                            const width = Math.round(
-                              state.displayInfo.dimensions.width * 10,
-                            );
-                            const height = Math.round(
-                              state.displayInfo.dimensions.height * 10,
-                            );
-                            const divisor = gcd(width, height);
-                            return `${width / divisor}:${height / divisor}`;
-                          })()
+                              const gcd = (a: number, b: number): number =>
+                                b === 0 ? a : gcd(b, a % b);
+                              const width = Math.round(
+                                state.displayInfo.dimensions.width * 10,
+                              );
+                              const height = Math.round(
+                                state.displayInfo.dimensions.height * 10,
+                              );
+                              const divisor = gcd(width, height);
+                              return `${width / divisor}:${height / divisor}`;
+                            })()
                           : "--"}
                       </div>
                       <div className="text-sm text-slate-400">Aspect Ratio</div>
