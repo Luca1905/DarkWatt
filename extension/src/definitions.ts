@@ -1,5 +1,5 @@
 export interface ExtensionActions {
-  getData(): void;
+  getData(): Promise<ExtensionData>;
 }
 
 interface Savings {
@@ -26,6 +26,7 @@ export interface ExtensionData {
   };
 }
 
+// Runtime enums that are also usable as types
 export enum MessageTypeCStoBG {
   DARK_THEME_DETECTED = "cs-bg-dark-theme-detected",
   DARK_THEME_NOT_DETECTED = "cs-bg-dark-theme-not-detected",
@@ -56,4 +57,4 @@ export interface MessageBGtoUI {
   type: MessageTypeBGtoUI;
   data?: any;
   error?: Error;
-}
+} 
