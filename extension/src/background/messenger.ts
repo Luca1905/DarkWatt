@@ -45,11 +45,11 @@ function onUIMessage(
       break;
 
     case MessageTypeUItoBG.SUBSCRIBE_TO_CHANGES:
-      changeListenerCount++;
+      changeListenerCount = Math.max(changeListenerCount + 1, 0);
       break;
 
     case MessageTypeUItoBG.UNSUBSCRIBE_TO_CHANGES:
-      changeListenerCount--;
+      changeListenerCount = Math.max(changeListenerCount - 1, 0);
       break;
 
     case MessageTypeUItoBG.LOAD_CONFIG:

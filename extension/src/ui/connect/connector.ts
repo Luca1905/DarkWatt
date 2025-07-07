@@ -21,11 +21,22 @@ export default class Connector implements ExtensionActions {
     return new Promise<T>((resolve, reject) => {
       chrome.runtime.sendMessage<MessageUItoBG>(
         { type, data },
-        ({ data, error }: MessageUItoBG) => {
+        (response: { data?: T; error?: string } | null) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+            return;
+          }
+
+          if (response == null) {
+            reject(new Error("No response from background script"));
+            return;
+          }
+
+          const { data: responseData, error } = response;
           if (error) {
             reject(error);
           } else {
-            resolve(data);
+            resolve(responseData as T);
           }
         },
       );
@@ -48,9 +59,19 @@ export default class Connector implements ExtensionActions {
     this.changeSubscribers.add(callback);
     if (this.changeSubscribers.size === 1) {
       chrome.runtime.onMessage.addListener(this.onChangesReceived);
-      chrome.runtime.sendMessage<MessageUItoBG>({
-        type: MessageTypeUItoBG.SUBSCRIBE_TO_CHANGES,
-      });
+      chrome.runtime.sendMessage<MessageUItoBG>(
+        {
+          type: MessageTypeUItoBG.SUBSCRIBE_TO_CHANGES,
+        },
+        () => {
+          if (chrome.runtime.lastError) {
+            console.warn(
+              "[Connector] Error subscribing to changes:",
+              chrome.runtime.lastError.message,
+            );
+          }
+        },
+      );
     }
   }
 
@@ -58,9 +79,19 @@ export default class Connector implements ExtensionActions {
     if (this.changeSubscribers.size > 0) {
       this.changeSubscribers.clear();
       chrome.runtime.onMessage.removeListener(this.onChangesReceived);
-      chrome.runtime.sendMessage<MessageUItoBG>({
-        type: MessageTypeUItoBG.UNSUBSCRIBE_TO_CHANGES,
-      });
+      chrome.runtime.sendMessage<MessageUItoBG>(
+        {
+          type: MessageTypeUItoBG.UNSUBSCRIBE_TO_CHANGES,
+        },
+        () => {
+          if (chrome.runtime.lastError) {
+            console.warn(
+              "[Connector] Error unsubscribing from changes:",
+              chrome.runtime.lastError.message,
+            );
+          }
+        },
+      );
     }
   }
 }
