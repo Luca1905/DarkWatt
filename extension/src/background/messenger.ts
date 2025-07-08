@@ -40,19 +40,15 @@ function messageListener(
   sendResponse: (response?: { data?: ExtensionData; error?: string }) => void,
 ): boolean | undefined {
   if (isUIMessage(message)) {
-    // Handle UI-originating messages
     return onUIMessage(message, sendResponse);
   }
 
   if (isCSMessage(message)) {
-    // Handle content-script messages
     onCSMessage(message);
-    // we do not keep the channel open for CS messages
     sendResponse({});
     return false;
   }
 
-  // Unsupported sender
   sendResponse({ error: "unsupportedSender" });
   return false;
 }
@@ -60,7 +56,6 @@ function messageListener(
 function onCSMessage(message: MessageCStoBG): void {
   switch (message.type) {
     case MessageTypeCStoBG.DARK_THEME_NOT_DETECTED: {
-      // Page is in light mode – compute potential savings
       captureScreenshot()
         .then((dataUrl) => {
           const savingMWh = calculatePotentialSavingsMWh(
@@ -75,7 +70,6 @@ function onCSMessage(message: MessageCStoBG): void {
       break;
     }
     default:
-      // No special handling for dark-mode pages yet
       break;
   }
 }

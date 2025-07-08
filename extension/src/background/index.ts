@@ -3,7 +3,6 @@ import {
   initMessenger,
   reportChanges,
 } from "@/background/messenger";
-import { captureScreenshot } from "@/utils/capture";
 import {
   getDisplayDimensions,
   getDisplayWorkArea,
@@ -12,11 +11,7 @@ import {
 import { sampleActiveTab as sampleTab } from "@/utils/sampling";
 import { calculatePotentialSavingsMWh } from "@/utils/savings";
 import db from "@/utils/storage";
-import initWasmModule, {
-  average_luma_in_nits,
-  average_luma_relative,
-  hello_wasm,
-} from "@/wasm/wasm_mod.js";
+import initWasmModule, { hello_wasm } from "@/wasm/wasm_mod.js";
 
 const SAMPLE_INTERVAL = 1000;
 
@@ -89,81 +84,6 @@ async function main() {
   hello_wasm();
   sampleLoop();
 }
-
-// TODO: use the messenger instead
-chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
-  // Ignore messages that are routed through the messenger (they have a `type` field instead of `action`).
-  if (typeof request?.type === "string") {
-    // Not our responsibility – let messenger (background/messenger.ts) handle it.
-    return false;
-  }
-
-  // Only handle messages that use the legacy `action` field.
-  if (typeof request?.action !== "string") {
-    return false;
-  }
-
-  switch (request.action) {
-    case "average_luma_relative": {
-      try {
-        const data = new Uint8Array(request.data);
-        const result = average_luma_relative(data);
-        sendResponse(result);
-      } catch (err) {
-        console.error("[LUMA]", "Error computing luma:", err);
-        sendResponse(null);
-      }
-      return false;
-    }
-    case "average_luma_in_nits": {
-      try {
-        const data = new Uint8Array(request.data);
-        const result = average_luma_in_nits(data);
-        sendResponse(result);
-      } catch (err) {
-        console.error("[LUMA]", "Error computing luma:", err);
-        sendResponse(null);
-      }
-      return false;
-    }
-
-    case "page_mode_detected": {
-      const currentPageMode = request.mode || "unknown";
-
-      if (currentPageMode === "light") {
-        captureScreenshot()
-          .then((dataUrl) => {
-            const savingMWh = calculatePotentialSavingsMWh(
-              dataUrl,
-              getDisplayDimensions(),
-            );
-            return reportChanges({ potentialSavingMWh: savingMWh });
-          })
-          .catch((err) => {
-            console.error("[DARKWATT]", "error calculating savings:", err);
-          })
-          .finally(() => sendResponse({ status: "ok" }));
-        return true;
-      }
-      sendResponse({ status: "ok" });
-      return false;
-    }
-
-    case "get_display_dimensions": {
-      sendResponse(getDisplayDimensions());
-      return true;
-    }
-
-    case "get_display_work_area": {
-      sendResponse(getDisplayWorkArea());
-      return true;
-    }
-
-    default:
-      sendResponse(null);
-      return false;
-  }
-});
 
 // TODO: use the messenger instead
 // @ts-ignore – processes API is not yet in the typings
