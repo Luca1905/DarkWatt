@@ -147,3 +147,4 @@ DarkWatt is released under the MIT License – see the [LICENSE](LICENSE) file f
 - [ ] ui: chart not loading new changes
 - [ ] Error handling response: TypeError: Cannot destructure property 'data' of 'object null' as it is null.
 - [ ] Uncaught (in promise) Error: Could not establish connection. Receiving end does not exist.
+- [ ] Permission error in devtools, chrome://, fix in tab utils file.

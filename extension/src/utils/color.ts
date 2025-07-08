@@ -54,7 +54,6 @@ export function rgbToHSL({ r: r255, g: g255, b: b255, a = 1 }: RGBA): HSLA {
   if (c === 0) {
     return { h: 0, s: 0, l, a };
   }
-
   let h =
     (max === r
       ? ((g - b) / c) % 6

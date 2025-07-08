@@ -7,13 +7,11 @@ import {
   MessageTypeUItoBG,
   type MessageUItoBG,
 } from "@/definitions";
-import { captureScreenshot } from "@/utils/capture";
-import { getDisplayDimensions } from "@/utils/display";
-import { calculatePotentialSavingsMWh } from "@/utils/savings";
 
 export interface ExtensionAdapter {
-  collect: () => Promise<ExtensionData>;
-  loadConfig: () => Promise<void>;
+  collect(): Promise<ExtensionData>;
+  loadConfig(): Promise<void>;
+  handleThemeDetected(): void;
 }
 
 let adapter: ExtensionAdapter;
@@ -53,20 +51,10 @@ function messageListener(
   return false;
 }
 
-function onCSMessage(message: MessageCStoBG): void {
-  switch (message.type) {
+function onCSMessage({ type }: MessageCStoBG): void {
+  switch (type) {
     case MessageTypeCStoBG.DARK_THEME_NOT_DETECTED: {
-      captureScreenshot()
-        .then((dataUrl) => {
-          const savingMWh = calculatePotentialSavingsMWh(
-            dataUrl,
-            getDisplayDimensions(),
-          );
-          reportChanges({ potentialSavingMWh: savingMWh });
-        })
-        .catch((err) => {
-          console.error("[DARKWATT] error calculating savings:", err);
-        });
+      adapter.handleThemeDetected();
       break;
     }
     default:

@@ -23,7 +23,11 @@ export async function sampleActiveTab() {
       url: tab.url,
     };
   } catch (err) {
-      console.warn("[SAMPLE]", `${new Date().toISOString()} skipped sample:`, err);
+    console.warn(
+      "[SAMPLE]",
+      `${new Date().toISOString()} skipped sample:`,
+      err,
+    );
     return null;
   }
 }

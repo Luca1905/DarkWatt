@@ -3,6 +3,7 @@ import {
   initMessenger,
   reportChanges,
 } from "@/background/messenger";
+import { captureScreenshot } from "@/utils/capture";
 import {
   getDisplayDimensions,
   getDisplayWorkArea,
@@ -11,7 +12,7 @@ import {
 import { sampleActiveTab as sampleTab } from "@/utils/sampling";
 import { calculatePotentialSavingsMWh } from "@/utils/savings";
 import db from "@/utils/storage";
-import initWasmModule, { hello_wasm } from "@/wasm/wasm_mod.js";
+import initWasmModule, { DisplayTech, hello_wasm } from "@/wasm/wasm_mod.js";
 
 const SAMPLE_INTERVAL = 1000;
 
@@ -42,6 +43,20 @@ const messengerAdapter: ExtensionAdapter = {
     // TODO
     return Promise.resolve();
   },
+
+  async handleThemeDetected() {
+    const dataUrl = await captureScreenshot();
+    const storedDisplayInfo = await db.QUERIES.getDisplayInfo();
+    const displayInfo = storedDisplayInfo?.dimensions ?? getDisplayDimensions();
+    // TODO: hours
+    const potential_savings = calculatePotentialSavingsMWh(
+      dataUrl,
+      displayInfo,
+      1,
+      DisplayTech.LCD,
+    );
+    reportChanges({ potentialSavingMWh: potential_savings });
+  },
 };
 
 initMessenger(messengerAdapter);
@@ -54,13 +69,7 @@ async function sampleLoop(): Promise<void> {
     if (response) {
       await db.MUTATIONS.saveLuminanceData(response.sample, response.url ?? "");
 
-      const savingMWh = calculatePotentialSavingsMWh(
-        response.dataUrl,
-        getDisplayDimensions(),
-      );
-
       reportChanges({
-        potentialSavingMWh: savingMWh,
         totalTrackedSites: await db.QUERIES.getTotalTrackedSites(),
       });
     }
