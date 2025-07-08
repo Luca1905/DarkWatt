@@ -41,6 +41,7 @@
   "permissions": [
     "webRequest",
     "tabs",
+    "activeTab",
     "processes",
     "system.display",
     "storage",
