@@ -1,5 +1,6 @@
 import { type MessageCStoBG, MessageTypeCStoBG } from "@/definitions";
-import { isDark } from "@/utils/theme-detector";
+import { isDark } from "@/inject/detector";
+import { runColorSchemeChangeDetector } from "@/utils/media-query";
 
 const sendBackgroundMessage = (message: MessageCStoBG): void => {
   try {
@@ -30,5 +31,13 @@ const onDomReady = (cb: () => void): void => {
     window.addEventListener("DOMContentLoaded", cb, { once: true });
   }
 };
+
+runColorSchemeChangeDetector((isDark) => {
+  sendBackgroundMessage({
+    type: MessageTypeCStoBG.THEME_CHANGE,
+    data: { isDark },
+  });
+  console.log(`[SCRIPT] Detected page mode: ${isDark ? "dark" : "light"}`);
+});
 
 onDomReady(init);

@@ -26,10 +26,10 @@ export interface ExtensionData {
   };
 }
 
-// Runtime enums that are also usable as types
 export enum MessageTypeCStoBG {
   DARK_THEME_DETECTED = "cs-bg-dark-theme-detected",
   DARK_THEME_NOT_DETECTED = "cs-bg-dark-theme-not-detected",
+  THEME_CHANGE = "cs-bg-theme-change",
 }
 export interface MessageCStoBG {
   id?: string;
