@@ -24,7 +24,6 @@ pub fn hello_wasm() {
     log("[WASM] LOADING COMPLETE");
 }
 
-#[wasm_bindgen]
 pub fn average_luma_relative(pixels: &[u8]) -> f32 {
     debug_assert!(pixels.len() % constants::PIXEL_COMPONENTS == 0);
 
@@ -50,7 +49,6 @@ pub fn average_luma_relative(pixels: &[u8]) -> f32 {
 
 // Ey is the approxiamte y coordinate of the color space
 // See: https://en.wikipedia.org/wiki/Rec._709#The_Y'C'BC'R_color_space
-#[wasm_bindgen]
 pub fn average_luma_in_nits(pixels: &[u8]) -> f32 {
     let ey: f32 = average_luma_relative(pixels);
 
@@ -125,7 +123,7 @@ pub fn estimate_saved_energy_mwh_from_data_uri(
     let power_saved_w = delta_lumen / efficacy_lm_w;
 
     // 3. Calculate energy saved (MWh)
-    let energy_saved_mwh = power_saved_w * hours;
+    let energy_saved_mwh = power_saved_w * hours * 1000.0;
 
     energy_saved_mwh.round() as u32
 }

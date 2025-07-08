@@ -9,12 +9,12 @@ export function calculatePotentialSavingsMWh(
   hours = 1,
   tech: DisplayTech = DisplayTech.LCD,
 ): number {
-  const wh = estimate_saved_energy_mwh_from_data_uri(
+  const mwh = estimate_saved_energy_mwh_from_data_uri(
     Math.round(width),
     Math.round(height),
     hours,
     tech,
     dataUrl,
   );
-  return wh * 1000;
+  return mwh;
 }
