@@ -1,11 +1,9 @@
+import { type MessageCStoBG, MessageTypeCStoBG } from "@/definitions";
 import { isDark } from "@/utils/theme-detector";
 
-const sendBackgroundMessage = (
-  action: string,
-  payload: Record<string, unknown> = {},
-): void => {
+const sendBackgroundMessage = (message: MessageCStoBG): void => {
   try {
-    chrome.runtime.sendMessage({ action, ...payload });
+    chrome.runtime.sendMessage<MessageCStoBG>(message);
   } catch (err) {
     console.warn("[SCRIPT] Unable to send background message:", err);
   }
@@ -14,7 +12,12 @@ const sendBackgroundMessage = (
 const init = (): void => {
   const isDarkMode = isDark() ? "dark" : "light";
   console.log(`[SCRIPT] Detected page mode: ${isDarkMode}`);
-  sendBackgroundMessage("page_mode_detected", { isDarkMode });
+  sendBackgroundMessage({
+    type:
+      isDarkMode === "dark"
+        ? MessageTypeCStoBG.DARK_THEME_DETECTED
+        : MessageTypeCStoBG.DARK_THEME_NOT_DETECTED,
+  });
 };
 
 const onDomReady = (cb: () => void): void => {

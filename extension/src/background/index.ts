@@ -92,6 +92,17 @@ async function main() {
 
 // TODO: use the messenger instead
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
+  // Ignore messages that are routed through the messenger (they have a `type` field instead of `action`).
+  if (typeof request?.type === "string") {
+    // Not our responsibility – let messenger (background/messenger.ts) handle it.
+    return false;
+  }
+
+  // Only handle messages that use the legacy `action` field.
+  if (typeof request?.action !== "string") {
+    return false;
+  }
+
   switch (request.action) {
     case "average_luma_relative": {
       try {
