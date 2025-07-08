@@ -155,7 +155,7 @@ export const App: React.FC = () => {
             <div className="flex items-center gap-3">
               <div className="relative">
                 <img
-                  src="icons/icon48.png"
+                  src="assets/images/darkwatt-icon-256.png"
                   alt="DarkWatt"
                   className="w-10 h-10 rounded-lg"
                 />
