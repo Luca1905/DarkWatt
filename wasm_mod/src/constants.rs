@@ -26,28 +26,9 @@ pub mod oetf_inv {
     pub const SCALE: f32 = 1.055;
     pub const GAMMA: f32 = 2.4;
 }
-
-/// Forward BT.709 / sRGB opto-electronic transfer function (OETF)
-///
-/// Turn a linear-light value Y (0–1) into an encoded value E′ (0–1):
-///
-/// E′ = 12.92 × Y                       , if Y ≤ 0.0031308
-/// E′ = 1.055 × Y^(1/2.4) − 0.055       , otherwise
-pub mod oetf {
-    pub const CUTOFF: f32 = 0.003_130_8;
-    pub const SLOPE: f32 = 12.92;
-    pub const ALPHA: f32 = 0.055;
-    pub const SCALE: f32 = 1.055;
-    pub const GAMMA: f32 = 2.4;
-}
-
 pub const DOWNSCALE_SIZE: u32 = 16;
 
 pub const PIXEL_COMPONENTS: usize = 4;
-
-pub const ALPHA_TRANSPARENT_THRESHOLD: f32 = 0.01;
-
-pub const LUMA_BLACK_THRESHOLD: f32 = 0.05;
 
 pub const EFFICACY_LCD_LM_PER_W: f32 = 90.0;
 

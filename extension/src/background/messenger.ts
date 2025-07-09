@@ -11,7 +11,7 @@ import {
 export interface ExtensionAdapter {
   collect(): Promise<ExtensionData>;
   loadConfig(): Promise<void>;
-  handleThemeDetected(): void;
+  handleThemeDetected({ isDark }: { isDark: boolean }): void;
 }
 
 export default class Messenger {
@@ -53,8 +53,12 @@ export default class Messenger {
 
   static onCSMessage({ type }: MessageCStoBG): void {
     switch (type) {
+      case MessageTypeCStoBG.DARK_THEME_DETECTED: {
+        Messenger.adapter.handleThemeDetected({ isDark: true });
+        break;
+      }
       case MessageTypeCStoBG.DARK_THEME_NOT_DETECTED: {
-        Messenger.adapter.handleThemeDetected();
+        Messenger.adapter.handleThemeDetected({ isDark: false });
         break;
       }
       default:
@@ -98,11 +102,10 @@ export default class Messenger {
     console.log("[REP] ", data);
     if (Messenger.changeListenerCount > 0) {
       try {
-      chrome.runtime.sendMessage<MessageBGtoUI>({
-        type: MessageTypeBGtoUI.CHANGES,
-        data,
-      });
-
+        chrome.runtime.sendMessage<MessageBGtoUI>({
+          type: MessageTypeBGtoUI.CHANGES,
+          data,
+        });
       } catch (err) {
         console.warn("[REP] UI not open", err);
       }

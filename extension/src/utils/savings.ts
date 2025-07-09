@@ -1,20 +1,19 @@
 import {
-  DisplayTech,
-  estimate_saved_energy_mwh_from_data_uri,
+  type DisplayTech,
+  estimate_saved_energy_wh_from_data_uri,
 } from "@/wasm/wasm_mod.js";
 
-export function calculatePotentialSavingsMWh(
+export function estimateSavingsWh(
   dataUrl: string,
   { width, height }: { width: number; height: number },
-  hours = 1,
-  tech: DisplayTech = DisplayTech.LCD,
+  hours: number,
+  tech: DisplayTech,
 ): number {
-  const mwh = estimate_saved_energy_mwh_from_data_uri(
+  return estimate_saved_energy_wh_from_data_uri(
     Math.round(width),
     Math.round(height),
     hours,
     tech,
     dataUrl,
   );
-  return mwh;
 }

@@ -6,7 +6,7 @@ import {
 } from "@/ui/components/chart-area-interactive";
 import { StatCard } from "@/ui/components/StatCard";
 import Connector from "@/ui/connect/connector";
-import type { LuminanceRecord } from "@/utils/storage";
+import type { LuminanceRecord } from "@/definitions";
 import storage from "@/utils/storage";
 import type { Nullable } from "@/utils/types";
 
@@ -15,8 +15,7 @@ type AppState = { [K in keyof ExtensionData]: Nullable<ExtensionData[K]> };
 const initialState: AppState = {
   currentLuminance: null,
   totalTrackedSites: null,
-  savings: { today: null, week: null, total: null },
-  potentialSavingMWh: null,
+  savings: { currentSite: null, today: null, week: null, total: null },
   displayInfo: {
     dimensions: { width: null, height: null },
     workArea: { width: null, height: null },
@@ -81,7 +80,7 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     isMounted.current = true;
-    console.log('load')
+    console.log("load");
     const connector = new Connector();
 
     // @ts-ignore
@@ -193,11 +192,11 @@ export const App: React.FC = () => {
                   />
                   <div className="grid grid-cols-2 gap-4">
                     <StatCard
-                      title="Potential Savings"
-                      value={state.potentialSavingMWh ?? "--"}
+                      title="Saved on this site"
+                      value={state.savings.currentSite ?? "--"}
                       unit="mWh"
                       icon="💚"
-                      isLoading={state.potentialSavingMWh === null}
+                      isLoading={state.savings.currentSite === null}
                       size="md"
                       floatingPointRepresentation
                     />

@@ -40,34 +40,6 @@ export function hello_wasm() {
 
 let WASM_VECTOR_LEN = 0;
 
-function passArray8ToWasm0(arg, malloc) {
-    const ptr = malloc(arg.length * 1, 1) >>> 0;
-    getUint8ArrayMemory0().set(arg, ptr / 1);
-    WASM_VECTOR_LEN = arg.length;
-    return ptr;
-}
-/**
- * @param {Uint8Array} pixels
- * @returns {number}
- */
-export function average_luma_relative(pixels) {
-    const ptr0 = passArray8ToWasm0(pixels, wasm.__wbindgen_malloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.average_luma_relative(ptr0, len0);
-    return ret;
-}
-
-/**
- * @param {Uint8Array} pixels
- * @returns {number}
- */
-export function average_luma_in_nits(pixels) {
-    const ptr0 = passArray8ToWasm0(pixels, wasm.__wbindgen_malloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.average_luma_in_nits(ptr0, len0);
-    return ret;
-}
-
 const cachedTextEncoder = (typeof TextEncoder !== 'undefined' ? new TextEncoder('utf-8') : { encode: () => { throw Error('TextEncoder not available') } } );
 
 const encodeString = (typeof cachedTextEncoder.encodeInto === 'function'
@@ -145,31 +117,14 @@ function _assertNum(n) {
  * @param {string} uri
  * @returns {number}
  */
-export function estimate_saved_energy_mwh_from_data_uri(display_width, display_height, hours, tech, uri) {
+export function estimate_saved_energy_wh_from_data_uri(display_width, display_height, hours, tech, uri) {
     _assertNum(display_width);
     _assertNum(display_height);
     _assertNum(tech);
     const ptr0 = passStringToWasm0(uri, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.estimate_saved_energy_mwh_from_data_uri(display_width, display_height, hours, tech, ptr0, len0);
-    return ret >>> 0;
-}
-
-function getArrayU8FromWasm0(ptr, len) {
-    ptr = ptr >>> 0;
-    return getUint8ArrayMemory0().subarray(ptr / 1, ptr / 1 + len);
-}
-/**
- * @param {Uint8Array} pixels
- * @returns {Uint8Array}
- */
-export function convert_rgba_to_dark_mode(pixels) {
-    const ptr0 = passArray8ToWasm0(pixels, wasm.__wbindgen_malloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.convert_rgba_to_dark_mode(ptr0, len0);
-    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
-    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
-    return v2;
+    const ret = wasm.estimate_saved_energy_wh_from_data_uri(display_width, display_height, hours, tech, ptr0, len0);
+    return ret;
 }
 
 /**

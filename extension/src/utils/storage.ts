@@ -1,52 +1,74 @@
-export interface LuminanceRecord {
-  luminance: number;
-  url: string;
-  date: string;
+import type {
+  DisplayInfo,
+  LuminanceRecord,
+  SavingsRecord,
+  SavingsSummary,
+} from "@/definitions";
+
+export interface StorageKey<T> {
+  name: string;
+  defaultValue: T;
 }
 
-const STORAGE_KEY = "luminanceRecords" as const;
-const DISPLAY_INFO_KEY = "displayInfo" as const;
+export class StorageService {
+  private cache = new Map<string, any>();
 
-let _cache: LuminanceRecord[] | null = null;
-let _displayInfoCache: {
-  dimensions: { width: number; height: number };
-  workArea: { width: number; height: number };
-} | null = null;
-
-function ensureArray(value: unknown): LuminanceRecord[] {
-  if (Array.isArray(value)) {
-    return value as LuminanceRecord[];
+  async get<T>(key: StorageKey<T>): Promise<T> {
+    if (this.cache.has(key.name)) {
+      return this.cache.get(key.name);
+    }
+    try {
+      const result = await chrome.storage.local.get(key.name);
+      const value = result[key.name] ?? key.defaultValue;
+      this.cache.set(key.name, value);
+      return value;
+    } catch (err) {
+      console.error(`Error reading "${key.name}"`, err);
+      return key.defaultValue;
+    }
   }
-  return [];
+
+  async set<T>(key: StorageKey<T>, value: T): Promise<void> {
+    try {
+      await chrome.storage.local.set({ [key.name]: value });
+      this.cache.set(key.name, value);
+    } catch (err) {
+      console.error(`Error writing "${key.name}"`, err);
+    }
+  }
+
+  clearCache(keyName?: string) {
+    if (keyName) {
+      this.cache.delete(keyName);
+    } else {
+      this.cache.clear();
+    }
+  }
 }
 
-async function getAllRecords(): Promise<LuminanceRecord[]> {
-  if (_cache) return _cache;
-  const result = await chrome.storage.local.get(STORAGE_KEY);
-  const records = ensureArray(result[STORAGE_KEY]);
-  _cache = records;
-  return records;
-}
+const storage = new StorageService();
 
-async function getDisplayInfo(): Promise<{
-  dimensions: { width: number; height: number };
-  workArea: { width: number; height: number };
-} | null> {
-  if (_displayInfoCache) return _displayInfoCache;
-  const result = await chrome.storage.local.get(DISPLAY_INFO_KEY);
-  const info = result[DISPLAY_INFO_KEY] ?? null;
-  _displayInfoCache = info;
-  return info;
-}
+const LUMINANCE_KEY: StorageKey<LuminanceRecord[]> = {
+  name: "luminanceRecords",
+  defaultValue: [],
+};
+const DISPLAY_INFO_KEY: StorageKey<DisplayInfo | null> = {
+  name: "displayInfo",
+  defaultValue: null,
+};
+const SAVINGS_KEY: StorageKey<SavingsRecord> = {
+  name: "savingsRecords",
+  defaultValue: {},
+};
 
-const QUERIES = {
+export const QUERIES = {
   async getAllLuminanceData(): Promise<LuminanceRecord[]> {
-    return getAllRecords();
+    return storage.get(LUMINANCE_KEY);
   },
 
   async getLatestLuminanceData(): Promise<LuminanceRecord | null> {
-    const records = await getAllRecords();
-    return records.length ? records[records.length - 1] : null;
+    const all = await storage.get(LUMINANCE_KEY);
+    return all.length ? all[all.length - 1] : null;
   },
 
   async getLuminanceAverageForDateRange(
@@ -55,8 +77,8 @@ const QUERIES = {
   ): Promise<number> {
     const start = startDate.getTime();
     const end = endDate.getTime();
-    const records = await getAllRecords();
-    const inRange = records.filter((r) => {
+    const all = await storage.get(LUMINANCE_KEY);
+    const inRange = all.filter((r) => {
       const t = new Date(r.date).getTime();
       return t >= start && t <= end;
     });
@@ -74,36 +96,59 @@ const QUERIES = {
   },
 
   async getTotalTrackedSites(): Promise<number> {
-    const records = await getAllRecords();
-    const uniqueUrls = new Set(records.map((r) => r.url));
-    return uniqueUrls.size;
+    const all = await storage.get(LUMINANCE_KEY);
+    return new Set(all.map((r) => r.url)).size;
   },
 
-  async getDisplayInfo() {
-    return getDisplayInfo();
+  async getDisplayInfo(): Promise<DisplayInfo | null> {
+    return storage.get(DISPLAY_INFO_KEY);
+  },
+
+  async getSavingsForSite(url: string): Promise<number> {
+    const records = await storage.get(SAVINGS_KEY);
+    return records[url] ?? 0;
   },
 };
 
-const MUTATIONS = {
+export const MUTATIONS = {
   async saveLuminanceData(nits: number, url: string): Promise<void> {
-    const record: LuminanceRecord = {
+    const newRecord: LuminanceRecord = {
       luminance: nits,
       url,
       date: new Date().toISOString(),
     };
-
-    const records = await getAllRecords();
-    const updated = [...records, record];
-    _cache = updated;
-    await chrome.storage.local.set({ [STORAGE_KEY]: updated });
+    const all = await storage.get(LUMINANCE_KEY);
+    const updated = [...all, newRecord];
+    await storage.set(LUMINANCE_KEY, updated);
   },
 
-  async saveDisplayInfo(info: {
-    dimensions: { width: number; height: number };
-    workArea: { width: number; height: number };
-  }): Promise<void> {
-    _displayInfoCache = info;
-    await chrome.storage.local.set({ [DISPLAY_INFO_KEY]: info });
+  async saveDisplayInfo(info: DisplayInfo): Promise<void> {
+    await storage.set(DISPLAY_INFO_KEY, info);
+  },
+
+  async updateSavings(data: {
+    url: string;
+    toSaveSavings: number;
+  }): Promise<SavingsSummary> {
+    const records = await storage.get(SAVINGS_KEY);
+    const prev = records[data.url] ?? 0;
+    const updatedForSite = prev + data.toSaveSavings;
+    const newRecords: SavingsRecord = {
+      ...records,
+      [data.url]: updatedForSite,
+    };
+    await storage.set(SAVINGS_KEY, newRecords);
+
+    // compute total across all sites
+    const total = Object.values(newRecords).reduce((sum, v) => sum + v, 0);
+    console.log(newRecords)
+
+    return {
+      currentSite: updatedForSite,
+      today: 0, // TODO: track per-day
+      week: 0, // TODO: track per-week
+      total,
+    };
   },
 };
 

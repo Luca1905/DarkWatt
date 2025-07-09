@@ -2,7 +2,23 @@ export interface ExtensionActions {
   getData(): Promise<ExtensionData>;
 }
 
-interface Savings {
+export interface LuminanceRecord {
+  luminance: number;
+  url: string;
+  date: string; // ISO
+}
+
+export interface DisplayInfo {
+  dimensions: { width: number; height: number };
+  workArea: { width: number; height: number };
+}
+
+export interface SavingsRecord {
+  [url: string]: number;
+}
+
+export interface SavingsSummary {
+  currentSite: number;
   today: number;
   week: number;
   total: number;
@@ -11,8 +27,7 @@ interface Savings {
 export interface ExtensionData {
   currentLuminance: number;
   totalTrackedSites: number;
-  savings: Savings;
-  potentialSavingMWh: number;
+  savings: SavingsSummary;
   displayInfo: {
     dimensions: {
       width: number;

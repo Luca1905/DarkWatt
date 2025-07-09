@@ -1,12 +1,11 @@
 import Messenger, { type ExtensionAdapter } from "@/background/messenger";
-import { captureScreenshot } from "@/utils/capture";
 import {
   getDisplayDimensions,
   getDisplayWorkArea,
   refreshDisplayInfo,
 } from "@/utils/display";
 import { sampleActiveTab as sampleTab } from "@/utils/sampling";
-import { calculatePotentialSavingsMWh } from "@/utils/savings";
+import { estimateSavingsWh } from "@/utils/savings";
 import db from "@/utils/storage";
 import initWasmModule, { DisplayTech, hello_wasm } from "@/wasm/wasm_mod.js";
 
@@ -28,7 +27,7 @@ const messengerAdapter: ExtensionAdapter = {
       currentLuminance: latest?.luminance ?? 0,
       totalTrackedSites,
       // TODO: compute these accurately once the implementation exists
-      savings: { today: 0, week: 0, total: 0 },
+      savings: { currentSite: 0, today: 0, week: 0, total: 0 },
       potentialSavingMWh: 0,
       displayInfo,
     };
@@ -39,18 +38,8 @@ const messengerAdapter: ExtensionAdapter = {
     return Promise.resolve();
   },
 
-  async handleThemeDetected() {
-    const dataUrl = await captureScreenshot();
-    const storedDisplayInfo = await db.QUERIES.getDisplayInfo();
-    const displayInfo = storedDisplayInfo?.dimensions ?? getDisplayDimensions();
-    // TODO: hours
-    const potential_savings = calculatePotentialSavingsMWh(
-      dataUrl,
-      displayInfo,
-      1,
-      DisplayTech.LCD,
-    );
-    Messenger.reportChanges({ potentialSavingMWh: potential_savings });
+  async handleThemeDetected({ isDark }) {
+    if (!isDark) return;
   },
 };
 
@@ -62,11 +51,22 @@ async function sampleLoop(): Promise<void> {
   try {
     const response = await sampleTab();
     if (response) {
+      const savings_wh = estimateSavingsWh(
+        response.dataUrl ?? "<NO_SITE>",
+        getDisplayDimensions(),
+        1,
+        DisplayTech.LCD,
+      );
       await db.MUTATIONS.saveLuminanceData(response.sample, response.url ?? "");
+      const savings = await db.MUTATIONS.updateSavings({
+        url: response.url ?? "<NO_SITE>",
+        toSaveSavings: savings_wh,
+      });
 
       Messenger.reportChanges({
         currentLuminance: response.sample,
         totalTrackedSites: await db.QUERIES.getTotalTrackedSites(),
+        savings,
       });
     }
   } catch (err) {
