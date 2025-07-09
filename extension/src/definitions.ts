@@ -40,8 +40,8 @@ export interface MessageCStoBG {
 export enum MessageTypeUItoBG {
   GET_DATA = "ui-bg-get-data",
   LOAD_CONFIG = "ui-bg-load-config",
-  SUBSCRIBE_TO_CHANGES = "bg-ui-subscribe-to-changes",
-  UNSUBSCRIBE_TO_CHANGES = "bg-ui-unsubscribe-to-changes",
+  SUBSCRIBE_TO_CHANGES = "ui-bg-subscribe-to-changes",
+  UNSUBSCRIBE_TO_CHANGES = "ui-bg-unsubscribe-to-changes",
 }
 export interface MessageUItoBG {
   type: MessageTypeUItoBG;

@@ -76,14 +76,17 @@ function onUIMessage(
 
     case MessageTypeUItoBG.SUBSCRIBE_TO_CHANGES:
       changeListenerCount = Math.max(changeListenerCount + 1, 0);
+      sendResponse({});
       return false;
 
     case MessageTypeUItoBG.UNSUBSCRIBE_TO_CHANGES:
       changeListenerCount = Math.max(changeListenerCount - 1, 0);
+      sendResponse({});
       return false;
 
     case MessageTypeUItoBG.LOAD_CONFIG:
       adapter.loadConfig();
+      sendResponse({});
       return false;
 
     default:
