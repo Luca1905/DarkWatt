@@ -12,7 +12,6 @@ const sendBackgroundMessage = (message: MessageCStoBG): void => {
 
 const init = (): void => {
   const isDarkMode = isDark() ? "dark" : "light";
-  console.log(`[SCRIPT] Detected page mode: ${isDarkMode}`);
   sendBackgroundMessage({
     type:
       isDarkMode === "dark"
@@ -37,7 +36,6 @@ runColorSchemeChangeDetector((isDark) => {
     type: MessageTypeCStoBG.THEME_CHANGE,
     data: { isDark },
   });
-  console.log(`[SCRIPT] Detected page mode: ${isDark ? "dark" : "light"}`);
 });
 
 onDomReady(init);

@@ -95,6 +95,7 @@ export default class Messenger {
   }
 
   static reportChanges(data: Partial<ExtensionData>): void {
+    console.log("[REP] ", data);
     if (Messenger.changeListenerCount > 0) {
       chrome.runtime.sendMessage<MessageBGtoUI>({
         type: MessageTypeBGtoUI.CHANGES,

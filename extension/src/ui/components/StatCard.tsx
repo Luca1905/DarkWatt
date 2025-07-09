@@ -11,6 +11,7 @@ interface StatCardProps {
   isLoading?: boolean;
   className?: string;
   size?: "sm" | "md" | "lg";
+  floatingPointRepresentation: boolean;
 }
 
 export const StatCard: React.FC<StatCardProps> = ({
@@ -23,6 +24,7 @@ export const StatCard: React.FC<StatCardProps> = ({
   isLoading = false,
   className,
   size = "md",
+  floatingPointRepresentation,
 }) => {
   const formatValue = () => {
     if (isLoading) return "--";
@@ -123,7 +125,7 @@ export const StatCard: React.FC<StatCardProps> = ({
             isLoading && "animate-pulse",
           )}
         >
-          {formatValue()}
+          {floatingPointRepresentation ? formatValue() : value}
         </span>
         {unit && (
           <span className="text-slate-400 text-sm transition-colors duration-300 group-hover:text-slate-300 font-medium">

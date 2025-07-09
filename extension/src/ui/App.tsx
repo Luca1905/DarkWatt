@@ -84,18 +84,28 @@ export const App: React.FC = () => {
     console.log('load')
     const connector = new Connector();
 
+    // @ts-ignore
+    window.connector = { connector };
+
     connector.getData().then(hydrate);
     connector.subscribeToChanges(hydrate);
 
+    const handleVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        console.log("unload");
+        connector.disconnect();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
     return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
       isMounted.current = false;
       connector.disconnect();
-      console.log('unload')
     };
   }, [hydrate]);
 
   // @ts-ignore
-  window.darkWattStateStore = { appState: state, updateState: safeSetState };
+  window.darkWattStateStore = { appState: state };
 
   const getTrend = (current: number | null, average: number | null) => {
     if (!current || !average) return undefined;
@@ -179,6 +189,7 @@ export const App: React.FC = () => {
                     trend={currentTrend?.direction}
                     trendValue={currentTrend?.value}
                     size="lg"
+                    floatingPointRepresentation
                   />
                   <div className="grid grid-cols-2 gap-4">
                     <StatCard
@@ -188,6 +199,7 @@ export const App: React.FC = () => {
                       icon="💚"
                       isLoading={state.potentialSavingMWh === null}
                       size="md"
+                      floatingPointRepresentation
                     />
                   </div>
                 </div>
@@ -205,6 +217,7 @@ export const App: React.FC = () => {
                     unit="mWh"
                     isLoading={state.savings.today === null}
                     size="sm"
+                    floatingPointRepresentation
                   />
                   <StatCard
                     title="This Week"
@@ -212,6 +225,7 @@ export const App: React.FC = () => {
                     unit="mWh"
                     isLoading={state.savings.week === null}
                     size="sm"
+                    floatingPointRepresentation
                   />
                   <StatCard
                     title="Total"
@@ -219,6 +233,7 @@ export const App: React.FC = () => {
                     unit="mWh"
                     isLoading={state.savings.total === null}
                     size="sm"
+                    floatingPointRepresentation
                   />
                 </div>
               </div>
@@ -235,6 +250,7 @@ export const App: React.FC = () => {
                     icon="🌐"
                     isLoading={state.totalTrackedSites === null}
                     size="md"
+                    floatingPointRepresentation={false}
                   />
                   <StatCard
                     title="Weekly Average"
@@ -243,6 +259,7 @@ export const App: React.FC = () => {
                     icon="📊"
                     isLoading={weeklyAverage === null}
                     size="md"
+                    floatingPointRepresentation
                   />
                 </div>
               </div>
@@ -272,6 +289,7 @@ export const App: React.FC = () => {
                     value={chartData.length}
                     icon="🔢"
                     size="md"
+                    floatingPointRepresentation={false}
                   />
                   <StatCard
                     title="Avg. Luminance"
@@ -280,6 +298,7 @@ export const App: React.FC = () => {
                     icon="📊"
                     isLoading={weeklyAverage === null}
                     size="md"
+                    floatingPointRepresentation
                   />
                 </div>
               </div>

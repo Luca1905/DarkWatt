@@ -30,7 +30,6 @@ const messengerAdapter: ExtensionAdapter = {
       // TODO: compute these accurately once the implementation exists
       savings: { today: 0, week: 0, total: 0 },
       potentialSavingMWh: 0,
-      cpuUsage: 0,
       displayInfo,
     };
   },
@@ -66,6 +65,7 @@ async function sampleLoop(): Promise<void> {
       await db.MUTATIONS.saveLuminanceData(response.sample, response.url ?? "");
 
       Messenger.reportChanges({
+        currentLuminance: response.sample,
         totalTrackedSites: await db.QUERIES.getTotalTrackedSites(),
       });
     }

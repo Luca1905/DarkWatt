@@ -9,56 +9,10 @@ import {
   runColorSchemeChangeDetector,
   stopColorSchemeChangeDetector,
 } from "@/utils/media-query";
-
-let listener: (() => void) | null = null;
-
-let documentIsVisible_ = !document.hidden;
-function documentIsVisible(): boolean {
-  return documentIsVisible_;
-}
-
-function watchForDocumentVisibility(): void {
-  document.addEventListener("visibilitychange", listener!, {
-    capture: true,
-    passive: true,
-  });
-  window.addEventListener("pageshow", listener!, {
-    capture: true,
-    passive: true,
-  });
-  window.addEventListener("focus", listener!, { capture: true, passive: true });
-}
-
-function stopWatchingForDocumentVisibility(): void {
-  document.removeEventListener("visibilitychange", listener!, {
-    capture: true,
-  });
-  window.removeEventListener("pageshow", listener!, {
-    capture: true,
-  });
-  window.removeEventListener("focus", listener!, {
-    capture: true,
-  });
-}
-
-function setListener(callback: () => void): void {
-  const alreadyWatching = Boolean(listener);
-  listener = () => {
-    if (!document.hidden) {
-      removeListener();
-      callback();
-      documentIsVisible_ = true;
-    }
-  };
-  if (!alreadyWatching) {
-    watchForDocumentVisibility();
-  }
-}
-
-function removeListener(): void {
-  stopWatchingForDocumentVisibility();
-  listener = null;
-}
+import {
+  documentIsVisible,
+  setDocumentVisibilityListener,
+} from "@/utils/visibility";
 
 function sendMessage(message: MessageCStoBG): void {
   try {
@@ -80,5 +34,5 @@ function updateEventListeners(): void {
   }
 }
 
-setListener(updateEventListeners);
+setDocumentVisibilityListener(updateEventListeners);
 updateEventListeners();
