@@ -56,13 +56,12 @@
     "webRequest",
     "tabs",
     "activeTab",
-    "processes",
     "system.display",
     "storage",
     "unlimitedStorage"
   ],
   "host_permissions": [
-      "*://*/*"
+      "<all_urls>"
   ],
   "web_accessible_resources": [
     {
