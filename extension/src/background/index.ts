@@ -26,9 +26,7 @@ const messengerAdapter: ExtensionAdapter = {
     return {
       currentLuminance: latest?.luminance ?? 0,
       totalTrackedSites,
-      // TODO: compute these accurately once the implementation exists
       savings: { currentSite: 0, today: 0, week: 0, total: 0 },
-      potentialSavingMWh: 0,
       displayInfo,
     };
   },
@@ -51,22 +49,36 @@ async function sampleLoop(): Promise<void> {
   try {
     const response = await sampleTab();
     if (response) {
-      const savings_wh = estimateSavingsWh(
+      const newSavings = estimateSavingsWh(
         response.dataUrl ?? "<NO_SITE>",
         getDisplayDimensions(),
         1,
         DisplayTech.LCD,
       );
-      await db.MUTATIONS.saveLuminanceData(response.sample, response.url ?? "");
-      const savings = await db.MUTATIONS.updateSavings({
-        url: response.url ?? "<NO_SITE>",
-        toSaveSavings: savings_wh,
-      });
+
+      await Promise.all([
+        db.MUTATIONS.saveLuminanceData(response.sample, response.url ?? ""),
+        db.MUTATIONS.addToSavingsStats(newSavings),
+        db.MUTATIONS.addToSavingsRecords({
+          url: response.url ?? "<NO_URL>",
+          newSavings,
+        })
+      ]);
+
+      const [currentSite, savingsStats] = await Promise.all([
+        db.QUERIES.getSavingsForSite(response.url ?? "<NO_URL>"),
+        db.QUERIES.getSavingsStats(),
+      ]);
 
       Messenger.reportChanges({
         currentLuminance: response.sample,
         totalTrackedSites: await db.QUERIES.getTotalTrackedSites(),
-        savings,
+        savings: {
+          currentSite,
+          today: savingsStats.today.savings,
+          week: savingsStats.week.savings,
+          total: savingsStats.total.savings,
+        },
       });
     }
   } catch (err) {

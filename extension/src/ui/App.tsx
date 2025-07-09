@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ExtensionData } from "@/definitions";
+import type { ExtensionData, LuminanceRecord } from "@/definitions";
 import {
   ChartAreaInteractive,
   type ChartData,
 } from "@/ui/components/chart-area-interactive";
 import { StatCard } from "@/ui/components/StatCard";
 import Connector from "@/ui/connect/connector";
-import type { LuminanceRecord } from "@/definitions";
 import storage from "@/utils/storage";
 import type { Nullable } from "@/utils/types";
 

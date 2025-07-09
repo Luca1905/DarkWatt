@@ -17,6 +17,21 @@ export interface SavingsRecord {
   [url: string]: number;
 }
 
+export interface SavingsStats {
+  today: {
+    savings: number;
+    reset: string;
+  };
+  week: {
+    savings: number;
+    reset: string;
+  };
+  total: {
+    savings: number;
+    since: string;
+  };
+}
+
 export interface SavingsSummary {
   currentSite: number;
   today: number;
