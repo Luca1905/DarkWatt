@@ -97,10 +97,15 @@ export default class Messenger {
   static reportChanges(data: Partial<ExtensionData>): void {
     console.log("[REP] ", data);
     if (Messenger.changeListenerCount > 0) {
+      try {
       chrome.runtime.sendMessage<MessageBGtoUI>({
         type: MessageTypeBGtoUI.CHANGES,
         data,
       });
+
+      } catch (err) {
+        console.warn("[REP] UI not open", err);
+      }
     }
   }
 }
