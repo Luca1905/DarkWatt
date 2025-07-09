@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ExtensionData } from "@/definitions";
 import {
   ChartAreaInteractive,
@@ -11,135 +11,97 @@ import storage from "@/utils/storage";
 import type { Nullable } from "@/utils/types";
 
 type AppState = { [K in keyof ExtensionData]: Nullable<ExtensionData[K]> };
+
 const initialState: AppState = {
   currentLuminance: null,
   totalTrackedSites: null,
-  savings: {
-    today: null,
-    week: null,
-    total: null,
-  },
+  savings: { today: null, week: null, total: null },
   potentialSavingMWh: null,
   displayInfo: {
-    dimensions: {
-      width: null,
-      height: null,
-    },
-    workArea: {
-      width: null,
-      height: null,
-    },
+    dimensions: { width: null, height: null },
+    workArea: { width: null, height: null },
   },
 };
 
 export const App: React.FC = () => {
+  const isMounted = useRef(false);
   const [state, setState] = useState<AppState>(initialState);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [weeklyAverage, setWeeklyAverage] = useState<number | null>(null);
 
-  const updateState = useCallback((updates: Partial<AppState>) => {
-    setState((prev) => ({ ...prev, ...updates }));
+  const safeSetState = useCallback((updates: Partial<AppState>) => {
+    if (isMounted.current) setState((prev) => ({ ...prev, ...updates }));
   }, []);
 
   const loadChartData = useCallback(async () => {
-    try {
-      const data = await storage.QUERIES.getAllLuminanceData();
-      const filteredData = data.filter((record: LuminanceRecord) => {
-        const recordTime = new Date(record.date).getTime();
-        const now = Date.now();
-        return now - recordTime <= 24 * 60 * 60 * 1000;
-      });
-
-      const desiredPoints = 20;
-      let sampledData = [];
-      if (filteredData.length <= desiredPoints) {
-        sampledData = filteredData;
-      } else {
-        const step = filteredData.length / desiredPoints;
-        for (let i = 0; i < desiredPoints; i++) {
-          sampledData.push(filteredData[Math.floor(i * step)]);
-        }
-      }
-
-      const chartPoints = sampledData.map((record: LuminanceRecord) => ({
-        time: new Date(record.date).toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        luminance: record.luminance,
-        date: record.date,
-      }));
-
-      setChartData(chartPoints);
-    } catch (err) {
-      console.error("[UI]", "Error loading chart data:", err);
-    }
+    const data = await storage.QUERIES.getAllLuminanceData();
+    const filtered = data.filter(
+      (r: LuminanceRecord) =>
+        Date.now() - new Date(r.date).getTime() <= 86_400_000,
+    );
+    const points = 20;
+    const sample =
+      filtered.length <= points
+        ? filtered
+        : Array.from(
+            { length: points },
+            (_, i) => filtered[Math.floor((i * filtered.length) / points)],
+          );
+    const mapped = sample.map((r: LuminanceRecord) => ({
+      time: new Date(r.date).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      luminance: r.luminance,
+      date: r.date,
+    }));
+    if (isMounted.current) setChartData(mapped);
   }, []);
 
   const loadWeeklyAverage = useCallback(async () => {
-    try {
-      const now = new Date();
-      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const average = await storage.QUERIES.getLuminanceAverageForDateRange(
-        weekAgo,
-        now,
-      );
-      setWeeklyAverage(average);
-    } catch (err) {
-      console.error("[UI]", "Error loading weekly average:", err);
-    }
+    const now = new Date();
+    const weekAgo = new Date(now.getTime() - 604_800_000);
+    const avg = await storage.QUERIES.getLuminanceAverageForDateRange(
+      weekAgo,
+      now,
+    );
+    if (isMounted.current) setWeeklyAverage(avg);
   }, []);
 
+  const hydrate = useCallback(
+    async (incoming?: Partial<AppState>) => {
+      if (incoming) safeSetState(incoming);
+      await Promise.all([loadChartData(), loadWeeklyAverage()]);
+      const info = await storage.QUERIES.getDisplayInfo();
+      if (info) safeSetState({ displayInfo: info } as Partial<AppState>);
+    },
+    [loadChartData, loadWeeklyAverage, safeSetState],
+  );
+
   useEffect(() => {
+    isMounted.current = true;
     const connector = new Connector();
 
-    connector
-      .getData()
-      .then((data) => {
-        updateState(data as Partial<AppState>);
-        loadChartData();
-        loadWeeklyAverage();
-        storage.QUERIES.getDisplayInfo()
-          .then((info) => {
-            if (info) updateState({ displayInfo: info } as Partial<AppState>);
-          })
-          .catch((err) =>
-            console.error("[UI]", "Error fetching display info:", err),
-          );
-      })
-      .catch((err) => {
-        console.error("[UI]", "Error fetching initial data:", err);
-      });
-
-    connector.subscribeToChanges((data) => {
-      updateState(data as Partial<AppState>);
-      loadChartData();
-      loadWeeklyAverage();
-      storage.QUERIES.getDisplayInfo()
-        .then((info) => {
-          if (info) updateState({ displayInfo: info } as Partial<AppState>);
-        })
-        .catch((err) =>
-          console.error("[UI]", "Error fetching display info:", err),
-        );
-    });
+    connector.getData().then(hydrate);
+    connector.subscribeToChanges(hydrate);
 
     return () => {
+      isMounted.current = false;
       connector.disconnect();
     };
-  }, [updateState, loadChartData, loadWeeklyAverage]);
+  }, [hydrate]);
 
   // @ts-ignore
-  window.darkWattStateStore = { appState: state, updateState };
+  window.darkWattStateStore = { appState: state, updateState: safeSetState };
 
   const getTrend = (current: number | null, average: number | null) => {
     if (!current || !average) return undefined;
     const diff = current - average;
-    const percentChange = ((diff / average) * 100).toFixed(1);
+    const pct = Math.abs((diff / average) * 100).toFixed(1);
     return {
       direction: diff > 0 ? "up" : diff < 0 ? "down" : "neutral",
-      value: `${Math.abs(Number(percentChange))}%`,
+      value: `${pct}%`,
     } as const;
   };
 
@@ -147,7 +109,6 @@ export const App: React.FC = () => {
 
   return (
     <div className="w-[420px] h-[640px] bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-white flex flex-col">
-      {/* Header */}
       <div className="relative bg-gradient-to-r from-slate-900/90 to-slate-800/90 backdrop-blur-sm border-b border-slate-700/50 flex-shrink-0">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
@@ -172,39 +133,35 @@ export const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Navigation */}
         <div className="px-6 pb-4">
           <div className="flex bg-slate-800/50 rounded-xl p-1 border border-slate-700/50">
             {[
               { id: "dashboard", label: "Dashboard", icon: "📊" },
               { id: "analytics", label: "Analytics", icon: "📈" },
               { id: "settings", label: "Settings", icon: "⚙️" },
-            ].map((tab) => (
+            ].map((t) => (
               <button
-                key={tab.id}
+                key={t.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => setActiveTab(t.id)}
                 className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  activeTab === tab.id
+                  activeTab === t.id
                     ? "bg-green-400/20 text-green-400 shadow-lg shadow-green-400/10 border border-green-400/30"
                     : "text-slate-400 hover:text-white hover:bg-slate-700/50"
                 }`}
               >
-                <span className="text-base">{tab.icon}</span>
-                <span>{tab.label}</span>
+                <span className="text-base">{t.icon}</span>
+                <span>{t.label}</span>
               </button>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Content */}
       <div className="flex-1 overflow-y-auto min-h-0">
         <div className="p-6">
-          {/* Dashboard Tab */}
           {activeTab === "dashboard" && (
             <div className="space-y-6 animate-[fadeIn_0.4s_ease-out]">
-              {/* Primary Metrics */}
               <div>
                 <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
                   <span className="text-xl">⚡</span>
@@ -234,7 +191,6 @@ export const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* Energy Savings */}
               <div>
                 <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
                   <span className="text-xl">🌱</span>
@@ -265,7 +221,6 @@ export const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* Activity Overview */}
               <div>
                 <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
                   <span className="text-xl">📍</span>
@@ -292,10 +247,8 @@ export const App: React.FC = () => {
             </div>
           )}
 
-          {/* Analytics Tab */}
           {activeTab === "analytics" && (
             <div className="space-y-6 animate-[fadeIn_0.4s_ease-out]">
-              {/* Chart Section */}
               <div>
                 <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
                   <span className="text-xl">📈</span>
@@ -306,7 +259,6 @@ export const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* Analytics Summary */}
               <div>
                 <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
                   <span className="text-xl">📊</span>
@@ -330,7 +282,6 @@ export const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* Environmental Impact */}
               <div>
                 <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
                   <span className="text-xl">🌍</span>
@@ -364,10 +315,8 @@ export const App: React.FC = () => {
             </div>
           )}
 
-          {/* Settings Tab */}
           {activeTab === "settings" && (
             <div className="space-y-6 animate-[fadeIn_0.4s_ease-out]">
-              {/* Display Information */}
               <div>
                 <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
                   <span className="text-xl">🖥️</span>
@@ -396,14 +345,14 @@ export const App: React.FC = () => {
                           ? (() => {
                               const gcd = (a: number, b: number): number =>
                                 b === 0 ? a : gcd(b, a % b);
-                              const width = Math.round(
+                              const w = Math.round(
                                 state.displayInfo.dimensions.width * 10,
                               );
-                              const height = Math.round(
+                              const h = Math.round(
                                 state.displayInfo.dimensions.height * 10,
                               );
-                              const divisor = gcd(width, height);
-                              return `${width / divisor}:${height / divisor}`;
+                              const d = gcd(w, h);
+                              return `${w / d}:${h / d}`;
                             })()
                           : "--"}
                       </div>
@@ -413,7 +362,6 @@ export const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* System Status */}
               <div>
                 <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
                   <span className="text-xl">⚙️</span>
@@ -441,7 +389,6 @@ export const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* About */}
               <div>
                 <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
                   <span className="text-xl">ℹ️</span>

@@ -25,6 +25,9 @@
     "enabled": true,
     "rules": {
       "recommended": true,
+      "complexity": {
+        "noStaticOnlyClass": "off"
+      },
       "suspicious": {
         "noAssignInExpressions": "off",
         "noExplicitAny": "off"

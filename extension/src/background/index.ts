@@ -1,8 +1,4 @@
-import {
-  type ExtensionAdapter,
-  initMessenger,
-  reportChanges,
-} from "@/background/messenger";
+import Messenger, { type ExtensionAdapter } from "@/background/messenger";
 import { captureScreenshot } from "@/utils/capture";
 import {
   getDisplayDimensions,
@@ -55,11 +51,11 @@ const messengerAdapter: ExtensionAdapter = {
       1,
       DisplayTech.LCD,
     );
-    reportChanges({ potentialSavingMWh: potential_savings });
+    Messenger.reportChanges({ potentialSavingMWh: potential_savings });
   },
 };
 
-initMessenger(messengerAdapter);
+Messenger.init(messengerAdapter);
 
 async function sampleLoop(): Promise<void> {
   const t0 = performance.now();
@@ -69,7 +65,7 @@ async function sampleLoop(): Promise<void> {
     if (response) {
       await db.MUTATIONS.saveLuminanceData(response.sample, response.url ?? "");
 
-      reportChanges({
+      Messenger.reportChanges({
         totalTrackedSites: await db.QUERIES.getTotalTrackedSites(),
       });
     }
