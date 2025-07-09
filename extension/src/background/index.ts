@@ -62,7 +62,7 @@ async function sampleLoop(): Promise<void> {
         db.MUTATIONS.addToSavingsRecords({
           url: response.url ?? "<NO_URL>",
           newSavings,
-        })
+        }),
       ]);
 
       const [currentSite, savingsStats] = await Promise.all([

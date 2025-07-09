@@ -1,5 +1,3 @@
-import type { SavingsSummary } from "@/definitions";
-import db from "@/utils/storage";
 import {
   type DisplayTech,
   estimate_saved_energy_wh_from_data_uri,
@@ -20,12 +18,3 @@ export function estimateSavingsWh(
   );
 }
 
-export async function getSavingsSummary(url: string): SavingsSummary {
-  const currentSite = await db.QUERIES.getSavingsForSite(url);
-  return {
-    currentSite,
-    today,
-    week,
-    total,
-  };
-}
