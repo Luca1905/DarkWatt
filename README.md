@@ -4,13 +4,10 @@ DarkWatt is a browser extension that helps you track the energy comsumption of y
 
 ## Features
 * Real-time measurement of page luminance (in nits).
-* Tracks per-tab CPU time (requires the experimental `chrome.processes` API).
 * Cross-browser packaging (Chromium & Firefox Nightly).
 * Core pixel maths implemented in Rust + WebAssembly.
 
 ## Browser Support & Limitations
-
-> **Important notice:** DarkWatt relies on the experimental `chrome.processes` API to monitor CPU usage. Consequently, the extension currently functions only in the **Chrome/Chromium Dev channel**. You can download a Dev build from <https://www.chromium.org/getting-involved/dev-channel/>. The API is documented at <https://developer.chrome.com/extensions/processes>.
 
 Firefox support is planned.
 
@@ -30,7 +27,7 @@ Pre-built `.zip` packages are attached to every GitHub release.
 
 1. Download the archive matching your browser.
 2. Unzip it somewhere.
-3. Open `chrome://extensions` (or `about:debugging#/runtime/this-firefox` in Firefox).
+3. Open `chrome://extensions`.
 4. Enable "Developer mode" and click "Load unpacked".
 5. Select the extracted `build/` directory.
 
@@ -109,7 +106,6 @@ DarkWatt is released under the MIT License – see the [LICENSE](LICENSE) file f
         - [ ] render onChange
     - [ ] calculating energy saving from nits saved.
     - [x] get display size for energy calculation
-- [x] get CPU usage data
 - [x] store data in dxdb, expose to popup
   - [x] use chrome storage instead
     - [x] move data querying from storage directly to UI

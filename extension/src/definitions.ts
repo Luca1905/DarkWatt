@@ -13,7 +13,6 @@ export interface ExtensionData {
   totalTrackedSites: number;
   savings: Savings;
   potentialSavingMWh: number;
-  cpuUsage: number;
   displayInfo: {
     dimensions: {
       width: number;

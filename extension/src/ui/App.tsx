@@ -20,7 +20,6 @@ const initialState: AppState = {
     total: null,
   },
   potentialSavingMWh: null,
-  cpuUsage: null,
   displayInfo: {
     dimensions: {
       width: null,
@@ -229,14 +228,6 @@ export const App: React.FC = () => {
                       unit="mWh"
                       icon="💚"
                       isLoading={state.potentialSavingMWh === null}
-                      size="md"
-                    />
-                    <StatCard
-                      title="CPU Usage"
-                      value={state.cpuUsage ?? "--"}
-                      unit="%"
-                      icon="🖥️"
-                      isLoading={state.cpuUsage === null}
                       size="md"
                     />
                   </div>

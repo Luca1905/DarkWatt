@@ -95,30 +95,6 @@ async function main() {
 }
 
 // TODO: use the messenger instead
-// @ts-ignore – processes API is not yet in the typings
-chrome.processes.onUpdated.addListener(async (processes: any) => {
-  try {
-    const [currentTab] = await chrome.tabs.query({
-      active: true,
-      lastFocusedWindow: true,
-    });
-    if (!currentTab) return;
-
-    // @ts-ignore – processes API typings missing
-    const activeProcessId = await chrome.processes.getProcessIdForTab(
-      currentTab.id,
-    );
-    const activeProcess = processes[activeProcessId];
-
-    if (activeProcess && typeof activeProcess.cpu === "number") {
-      reportChanges(await messengerAdapter.collect());
-    }
-  } catch (err) {
-    console.warn("[STATS]", "Error sending stats update:", err);
-  }
-});
-
-// TODO: use the messenger instead
 chrome.system.display.onDisplayChanged.addListener(refreshDisplayInfo);
 
 main().catch((err) => {
