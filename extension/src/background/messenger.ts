@@ -76,14 +76,17 @@ export default class Messenger {
 
       case MessageTypeUItoBG.SUBSCRIBE_TO_CHANGES:
         Messenger.changeListenerCount++;
+        sendResponse({});
         break;
 
       case MessageTypeUItoBG.UNSUBSCRIBE_TO_CHANGES:
         Messenger.changeListenerCount--;
+        sendResponse({});
         break;
 
       case MessageTypeUItoBG.LOAD_CONFIG:
         Messenger.adapter.loadConfig();
+        sendResponse({});
         break;
 
       default:

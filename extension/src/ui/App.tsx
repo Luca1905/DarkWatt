@@ -81,6 +81,7 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     isMounted.current = true;
+    console.log('load')
     const connector = new Connector();
 
     connector.getData().then(hydrate);
@@ -89,6 +90,7 @@ export const App: React.FC = () => {
     return () => {
       isMounted.current = false;
       connector.disconnect();
+      console.log('unload')
     };
   }, [hydrate]);
 
