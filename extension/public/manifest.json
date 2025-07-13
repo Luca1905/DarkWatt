@@ -39,12 +39,10 @@
     } 
   ],
   "permissions": [
-    "webRequest",
     "tabs",
     "activeTab",
     "system.display",
-    "storage",
-    "unlimitedStorage"
+    "storage"
   ],
   "host_permissions": [
       "<all_urls>"
