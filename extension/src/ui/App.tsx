@@ -74,63 +74,6 @@ function TerminalSettingsDialog() {
         <div className="space-y-4">
           <div className="border border-green-700 p-2">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-green-300">AUTO_DETECT_MODE</span>
-              <span className="text-green-400">
-                [{settings.autoDetect ? "ON" : "OFF"}]
-              </span>
-            </div>
-            <div className="text-xs text-green-600 mb-2">
-              &gt; Automatically scan for dark mode support
-            </div>
-            <Switch
-              checked={settings.autoDetect}
-              onCheckedChange={(checked) =>
-                setSettings((prev) => ({ ...prev, autoDetect: checked }))
-              }
-              className="data-[state=checked]:bg-green-600"
-            />
-          </div>
-
-          <div className="border border-green-700 p-2">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-green-300">NOTIFICATIONS</span>
-              <span className="text-green-400">
-                [{settings.notifications ? "ON" : "OFF"}]
-              </span>
-            </div>
-            <div className="text-xs text-green-600 mb-2">
-              &gt; Alert when dark mode opportunities detected
-            </div>
-            <Switch
-              checked={settings.notifications}
-              onCheckedChange={(checked) =>
-                setSettings((prev) => ({ ...prev, notifications: checked }))
-              }
-              className="data-[state=checked]:bg-green-600"
-            />
-          </div>
-
-          <div className="border border-green-700 p-2">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-green-300">FORCE_DARK_MODE</span>
-              <span className="text-green-400">
-                [{settings.aggressiveMode ? "ON" : "OFF"}]
-              </span>
-            </div>
-            <div className="text-xs text-green-600 mb-2">
-              &gt; Override site styling with dark theme
-            </div>
-            <Switch
-              checked={settings.aggressiveMode}
-              onCheckedChange={(checked) =>
-                setSettings((prev) => ({ ...prev, aggressiveMode: checked }))
-              }
-              className="data-[state=checked]:bg-green-600"
-            />
-          </div>
-
-          <div className="border border-green-700 p-2">
-            <div className="flex items-center justify-between mb-2">
               <span className="text-green-300">ENABLE_PULSE_BALL</span>
               <span className="text-green-400">
                 [{settings.enablePulseBall ? "ON" : "OFF"}]
@@ -227,7 +170,6 @@ export default function DarkWattTerminal() {
   const [error, setError] = useState<string | null>(null);
   const [connector] = useState(() => new Connector());
 
-  // Initialize data and set up real-time updates
   useEffect(() => {
     let isMounted = true;
 
@@ -253,10 +195,8 @@ export default function DarkWattTerminal() {
       }
     };
 
-    // Subscribe to real-time updates
     connector.subscribeToChanges(handleDataUpdate);
 
-    // Load initial data
     loadInitialData();
 
     return () => {
@@ -265,11 +205,9 @@ export default function DarkWattTerminal() {
     };
   }, [connector]);
 
-  // Define luminance threshold for dark/light mode detection
   const LUMINANCE_THRESHOLD = 50; // nits
   const isDarkMode = data ? data.currentLuminance < LUMINANCE_THRESHOLD : false;
 
-  // Handle loading state
   if (isLoading) {
     return (
       <div className="w-[450px] h-[800px] bg-black text-green-100 font-mono overflow-hidden border-2 border-green-500 flex items-center justify-center">
@@ -283,7 +221,6 @@ export default function DarkWattTerminal() {
     );
   }
 
-  // Handle error state
   if (error) {
     return (
       <div className="w-[450px] h-[800px] bg-black text-green-100 font-mono overflow-hidden border-2 border-red-500 flex items-center justify-center">
