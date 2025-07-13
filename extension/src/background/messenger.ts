@@ -110,12 +110,15 @@ export default class Messenger {
             type: MessageTypeBGtoUI.CHANGES,
             data,
           },
-          (response) => {
+          (_response) => {
             if (chrome.runtime.lastError) {
               // This is expected when the UI popup is closed
-              console.log("[REP] UI not available:", chrome.runtime.lastError.message);
+              console.log(
+                "[REP] UI not available:",
+                chrome.runtime.lastError.message,
+              );
             }
-          }
+          },
         );
       } catch (err) {
         console.warn("[REP] Failed to send message:", err);

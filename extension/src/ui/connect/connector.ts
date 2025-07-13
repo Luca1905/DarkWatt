@@ -79,7 +79,7 @@ export default class Connector implements ExtensionActions {
           {
             type: MessageTypeUItoBG.SUBSCRIBE_TO_CHANGES,
           },
-          (response) => {
+          (_response) => {
             if (chrome.runtime.lastError) {
               console.warn(
                 "[Connector] Error subscribing to changes:",
@@ -103,7 +103,7 @@ export default class Connector implements ExtensionActions {
           {
             type: MessageTypeUItoBG.UNSUBSCRIBE_TO_CHANGES,
           },
-          (response) => {
+          (_response) => {
             if (chrome.runtime.lastError) {
               console.warn(
                 "[Connector] Error unsubscribing from changes:",
