@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useRef } from "react";
 
-export default function PulseBall() {
+interface PulseBallProps {
+  currentLuminance: number;
+  isDarkMode: boolean;
+}
+
+export default function PulseBall({
+  currentLuminance,
+  isDarkMode,
+}: PulseBallProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const asciiRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number>(0);
@@ -15,6 +23,8 @@ export default function PulseBall() {
     targetRadius: 100,
     hue: 200,
     targetHue: 200,
+    pulseIntensity: 0.1, // Default pulse intensity
+    colorScheme: "light" as "light" | "dark",
     particles: [] as Array<{
       x: number;
       y: number;
@@ -89,19 +99,42 @@ export default function PulseBall() {
 
       const ball = ballRef.current;
 
+      // Update pulse intensity and color based on mode
+      if (isDarkMode) {
+        // Active state (dark mode) - more intense pulsation
+        ball.pulseIntensity = 0.3;
+        ball.targetHue = 120; // Green hue for dark mode
+        ball.colorScheme = "dark";
+      } else {
+        // Resting state (light mode) - subtle pulsation
+        ball.pulseIntensity = 0.1;
+        ball.targetHue = 200; // Blue hue for light mode
+        ball.colorScheme = "light";
+      }
+
       ctx.fillStyle = "rgba(0,0,0,1)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       const time = Date.now() / 1000;
-      const pulseFactor = Math.sin(time) * 0.1 + 0.9;
+      const pulseFactor =
+        Math.sin(time * (isDarkMode ? 2 : 1)) * ball.pulseIntensity +
+        (1 - ball.pulseIntensity);
+
+      // Scale base radius based on luminance (higher luminance = larger ball)
+      const luminanceScale = Math.max(
+        0.5,
+        Math.min(1.5, currentLuminance / 100),
+      );
+      ball.baseRadius = 100 * luminanceScale;
       ball.targetRadius = ball.baseRadius * pulseFactor;
 
       ball.currentRadius += (ball.targetRadius - ball.currentRadius) * 0.1;
-      ball.hue += (ball.targetHue - ball.hue) * 0.1;
+      ball.hue += (ball.targetHue - ball.hue) * 0.05;
 
       ball.x = canvas.width / 2;
       ball.y = canvas.height / 2;
 
+      // Create different gradients for dark and light modes
       const gradient = ctx.createRadialGradient(
         ball.x,
         ball.y,
@@ -111,12 +144,24 @@ export default function PulseBall() {
         ball.currentRadius,
       );
 
-      gradient.addColorStop(0, "rgba(255, 255, 255, 1)");
-      gradient.addColorStop(0.7, "rgba(180, 180, 180, 0.8)");
-      gradient.addColorStop(1, "rgba(80, 80, 80, 0.2)");
+      if (isDarkMode) {
+        // Dark mode colors - more vibrant and energetic
+        gradient.addColorStop(0, `hsl(${ball.hue}, 100%, 80%)`);
+        gradient.addColorStop(0.5, `hsl(${ball.hue}, 80%, 60%)`);
+        gradient.addColorStop(0.8, `hsl(${ball.hue}, 60%, 40%)`);
+        gradient.addColorStop(1, `hsl(${ball.hue}, 40%, 20%)`);
+      } else {
+        // Light mode colors - subtle and calm
+        gradient.addColorStop(0, "rgba(255, 255, 255, 1)");
+        gradient.addColorStop(0.7, "rgba(180, 180, 180, 0.8)");
+        gradient.addColorStop(1, "rgba(80, 80, 80, 0.2)");
+      }
 
-      ctx.shadowColor = "rgba(255, 255, 255, 0.8)";
-      ctx.shadowBlur = 30;
+      // Enhanced shadow for dark mode
+      ctx.shadowColor = isDarkMode
+        ? `hsl(${ball.hue}, 100%, 60%)`
+        : "rgba(255, 255, 255, 0.8)";
+      ctx.shadowBlur = isDarkMode ? 50 : 30;
       ctx.fillStyle = gradient;
       ctx.beginPath();
       ctx.arc(ball.x, ball.y, ball.currentRadius, 0, Math.PI * 2);
@@ -131,13 +176,34 @@ export default function PulseBall() {
         ball.y,
         ball.currentRadius * 0.3,
       );
-      coreGradient.addColorStop(0, "rgba(255, 255, 255, 1)");
-      coreGradient.addColorStop(1, "rgba(255, 255, 255, 0.3)");
+
+      if (isDarkMode) {
+        coreGradient.addColorStop(0, `hsl(${ball.hue}, 100%, 90%)`);
+        coreGradient.addColorStop(1, `hsl(${ball.hue}, 80%, 50%)`);
+      } else {
+        coreGradient.addColorStop(0, "rgba(255, 255, 255, 1)");
+        coreGradient.addColorStop(1, "rgba(255, 255, 255, 0.3)");
+      }
 
       ctx.fillStyle = coreGradient;
       ctx.beginPath();
       ctx.arc(ball.x, ball.y, ball.currentRadius * 0.3, 0, Math.PI * 2);
       ctx.fill();
+
+      // Add more particles in dark mode
+      if (isDarkMode && Math.random() < 0.1) {
+        const angle = Math.random() * Math.PI * 2;
+        const distance = ball.currentRadius * 0.8;
+        ball.particles.push({
+          x: ball.x + Math.cos(angle) * distance,
+          y: ball.y + Math.sin(angle) * distance,
+          vx: (Math.random() - 0.5) * 2,
+          vy: (Math.random() - 0.5) * 2,
+          life: 60,
+          maxLife: 60,
+          size: Math.random() * 3 + 1,
+        });
+      }
 
       ball.particles.forEach((particle, idx) => {
         particle.x += particle.vx;
@@ -145,9 +211,13 @@ export default function PulseBall() {
         particle.life--;
 
         const alpha = particle.life / particle.maxLife;
-        ctx.fillStyle = `rgba(220, 220, 220, ${alpha}`;
-        ctx.shadowColor = `rgba(220, 220, 220, ${alpha}`;
-        ctx.shadowBlur = 8;
+        const particleColor = isDarkMode
+          ? `hsl(${ball.hue}, 100%, 70%)`
+          : "rgba(220, 220, 220, 1)";
+
+        ctx.fillStyle = particleColor.replace("1)", `${alpha})`);
+        ctx.shadowColor = particleColor.replace("1)", `${alpha})`);
+        ctx.shadowBlur = isDarkMode ? 12 : 8;
         ctx.beginPath();
         ctx.arc(particle.x, particle.y, particle.size * alpha, 0, Math.PI * 2);
         ctx.fill();
@@ -185,7 +255,7 @@ export default function PulseBall() {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [convertToAscii]);
+  }, [convertToAscii, isDarkMode, currentLuminance]);
 
   return (
     <div className="relative w-full h-80 bg-black border border-green-500 overflow-hidden inset-0">
@@ -199,6 +269,19 @@ export default function PulseBall() {
           letterSpacing: "-0.5px",
         }}
       />
+      {/* Luminance display overlay */}
+      <div className="absolute bottom-4 left-4 right-4 text-center">
+        <div
+          className={`text-xs font-mono ${isDarkMode ? "text-green-400" : "text-green-300"}`}
+        >
+          LUMINANCE: {Math.round(currentLuminance)} nits
+        </div>
+        <div
+          className={`text-xs font-mono ${isDarkMode ? "text-green-600" : "text-green-500"}`}
+        >
+          {isDarkMode ? "[DARK MODE ACTIVE]" : "[LIGHT MODE]"}
+        </div>
+      </div>
     </div>
   );
 }

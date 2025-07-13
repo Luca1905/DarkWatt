@@ -1,7 +1,8 @@
 "use client";
 
 import { Moon, Zap } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import type { ExtensionData } from "@/definitions";
 import {
   Dialog,
   DialogContent,
@@ -11,6 +12,7 @@ import {
 } from "@/ui/components/dialog";
 import PulseBall from "@/ui/components/pulse-ball";
 import { Switch } from "@/ui/components/switch";
+import Connector from "@/ui/connect/connector";
 
 function TerminalStat({
   icon: Icon,
@@ -131,7 +133,7 @@ function TerminalSettingsDialog() {
   );
 }
 
-function TerminalAnalyticsDialog() {
+function TerminalAnalyticsDialog({ data }: { data: ExtensionData }) {
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -153,11 +155,15 @@ function TerminalAnalyticsDialog() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <div className="text-green-400 text-xs">TOTAL_SAVED:</div>
-                <div className="text-green-100 font-bold">2.4kWh</div>
+                <div className="text-green-100 font-bold">
+                  {(data.savings.total / 1000).toFixed(1)}kWh
+                </div>
               </div>
               <div>
                 <div className="text-green-400 text-xs">SITES_OPT:</div>
-                <div className="text-green-100 font-bold">156</div>
+                <div className="text-green-100 font-bold">
+                  {data.totalTrackedSites}
+                </div>
               </div>
             </div>
           </div>
@@ -165,19 +171,28 @@ function TerminalAnalyticsDialog() {
           <div className="border border-green-700 p-3 space-y-2 text-xs">
             <div className="flex justify-between">
               <span className="text-green-400">WEEK_TOTAL:</span>
-              <span className="text-green-100">847W</span>
+              <span className="text-green-100">
+                {Math.round(data.savings.week)}W
+              </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-green-400">CO2_REDUCED:</span>
-              <span className="text-green-100">1.2kg</span>
+              <span className="text-green-400">CURRENT_SITE:</span>
+              <span className="text-green-100">
+                {Math.round(data.savings.currentSite)}W
+              </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-green-400">BATTERY_EXT:</span>
-              <span className="text-green-100">+4.2hrs</span>
+              <span className="text-green-400">LUMINANCE:</span>
+              <span className="text-green-100">
+                {Math.round(data.currentLuminance)} nits
+              </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-green-400">UPTIME:</span>
-              <span className="text-green-100">23d 14h</span>
+              <span className="text-green-400">DISPLAY:</span>
+              <span className="text-green-100">
+                {data.displayInfo.dimensions.width}x
+                {data.displayInfo.dimensions.height}
+              </span>
             </div>
           </div>
         </div>
@@ -187,9 +202,82 @@ function TerminalAnalyticsDialog() {
 }
 
 export default function DarkWattTerminal() {
-  const [_reactorHealth, _setReactorHealth] = useState(85);
-  const [energySaved, _setEnergySaved] = useState(247);
-  const [darkSites, _setDarkSites] = useState(12);
+  const [data, setData] = useState<ExtensionData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [connector] = useState(() => new Connector());
+
+  // Initialize data and set up real-time updates
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadInitialData = async () => {
+      try {
+        const initialData = await connector.getData();
+        if (isMounted) {
+          setData(initialData);
+          setIsLoading(false);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(err instanceof Error ? err.message : "Failed to load data");
+          setIsLoading(false);
+        }
+      }
+    };
+
+    const handleDataUpdate = (newData: ExtensionData) => {
+      if (isMounted) {
+        setData(newData);
+        setError(null);
+      }
+    };
+
+    // Subscribe to real-time updates
+    connector.subscribeToChanges(handleDataUpdate);
+
+    // Load initial data
+    loadInitialData();
+
+    return () => {
+      isMounted = false;
+      connector.disconnect();
+    };
+  }, [connector]);
+
+  // Define luminance threshold for dark/light mode detection
+  const LUMINANCE_THRESHOLD = 50; // nits
+  const isDarkMode = data ? data.currentLuminance < LUMINANCE_THRESHOLD : false;
+
+  // Handle loading state
+  if (isLoading) {
+    return (
+      <div className="w-[450px] h-[800px] bg-black text-green-100 font-mono overflow-hidden border-2 border-green-500 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-green-400 mb-2">Loading...</div>
+          <div className="text-green-600 text-sm">
+            Initializing DarkWatt Core
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle error state
+  if (error) {
+    return (
+      <div className="w-[450px] h-[800px] bg-black text-green-100 font-mono overflow-hidden border-2 border-red-500 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-400 mb-2">Error</div>
+          <div className="text-red-600 text-sm">{error}</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return null;
+  }
 
   return (
     <div className="w-[450px] h-[800px] bg-black text-green-100 font-mono overflow-hidden border-2 border-green-500">
@@ -206,7 +294,7 @@ export default function DarkWattTerminal() {
             </div>
           </div>
           <div className="flex gap-2">
-            <TerminalAnalyticsDialog />
+            <TerminalAnalyticsDialog data={data} />
             <TerminalSettingsDialog />
           </div>
         </div>
@@ -218,8 +306,10 @@ export default function DarkWattTerminal() {
             <span className="text-green-600">CORE PULSING...</span>
           </div>
           <div className="text-right">
-            <div className="text-green-100">{energySaved}W SAVED</div>
-            <div className="text-green-600">TODAY</div>
+            <div className="text-green-100">
+              {Math.round(data.currentLuminance)} nits
+            </div>
+            <div className="text-green-600">CURRENT LUMINANCE</div>
           </div>
         </div>
       </div>
@@ -239,20 +329,23 @@ export default function DarkWattTerminal() {
               </div>
             </div>
 
-            <PulseBall />
+            <PulseBall
+              currentLuminance={data.currentLuminance}
+              isDarkMode={isDarkMode}
+            />
           </div>
         </div>
 
         <div className="space-y-3">
           <TerminalStat
             icon={Zap}
-            value={`${energySaved}W`}
+            value={`${Math.round(data.savings.today)}W`}
             label="ENERGY_SAVED"
             trend={{ direction: "up", value: "12%" }}
           />
           <TerminalStat
             icon={Moon}
-            value={darkSites.toString()}
+            value={data.totalTrackedSites.toString()}
             label="DARK_SITES"
           />
         </div>

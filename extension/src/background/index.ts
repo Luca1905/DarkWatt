@@ -15,6 +15,7 @@ const messengerAdapter: ExtensionAdapter = {
   async collect() {
     const latest = await db.QUERIES.getLatestLuminanceData();
     const totalTrackedSites = await db.QUERIES.getTotalTrackedSites();
+    const savingsStats = await db.QUERIES.getSavingsStats();
 
     const storedDisplayInfo = await db.QUERIES.getDisplayInfo();
 
@@ -26,7 +27,12 @@ const messengerAdapter: ExtensionAdapter = {
     return {
       currentLuminance: latest?.luminance ?? 0,
       totalTrackedSites,
-      savings: { currentSite: 0, today: 0, week: 0, total: 0 },
+      savings: {
+        currentSite: 0, // This will be updated with real data from the current site
+        today: savingsStats.today.savings,
+        week: savingsStats.week.savings,
+        total: savingsStats.total.savings,
+      },
       displayInfo,
     };
   },
@@ -65,9 +71,10 @@ async function sampleLoop(): Promise<void> {
         }),
       ]);
 
-      const [currentSite, savingsStats] = await Promise.all([
+      const [currentSite, savingsStats, storedDisplayInfo] = await Promise.all([
         db.QUERIES.getSavingsForSite(response.url ?? "<NO_URL>"),
         db.QUERIES.getSavingsStats(),
+        db.QUERIES.getDisplayInfo(),
       ]);
 
       Messenger.reportChanges({
@@ -78,6 +85,10 @@ async function sampleLoop(): Promise<void> {
           today: savingsStats.today.savings,
           week: savingsStats.week.savings,
           total: savingsStats.total.savings,
+        },
+        displayInfo: storedDisplayInfo ?? {
+          dimensions: getDisplayDimensions(),
+          workArea: getDisplayWorkArea(),
         },
       });
     }
