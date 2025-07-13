@@ -19,27 +19,35 @@ export default class Connector implements ExtensionActions {
     data?: string,
   ): Promise<T> {
     return new Promise<T>((resolve, reject) => {
-      chrome.runtime.sendMessage<MessageUItoBG>(
-        { type, data },
-        (response: { data?: T; error?: string } | null) => {
-          if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message));
-            return;
-          }
+      try {
+        chrome.runtime.sendMessage<MessageUItoBG>(
+          { type, data },
+          (response: { data?: T; error?: string } | null) => {
+            if (chrome.runtime.lastError) {
+              console.error("[Connector] Chrome runtime error:", chrome.runtime.lastError);
+              reject(new Error(`Connection error: ${chrome.runtime.lastError.message}`));
+              return;
+            }
 
-          if (response == null) {
-            reject(new Error("No response from background script"));
-            return;
-          }
+            if (response == null) {
+              console.error("[Connector] No response from background script");
+              reject(new Error("No response from background script"));
+              return;
+            }
 
-          const { data: responseData, error } = response;
-          if (error) {
-            reject(error);
-          } else {
-            resolve(responseData as T);
-          }
-        },
-      );
+            const { data: responseData, error } = response;
+            if (error) {
+              console.error("[Connector] Background script error:", error);
+              reject(new Error(`Background script error: ${error}`));
+            } else {
+              resolve(responseData as T);
+            }
+          },
+        );
+      } catch (error) {
+        console.error("[Connector] Failed to send message:", error);
+        reject(new Error(`Failed to send message: ${error}`));
+      }
     });
   }
 

@@ -44,7 +44,7 @@ export default function PulseBall({
 
     if (canvas.width <= 0 || canvas.height <= 0) return;
 
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return;
 
     const charWidth = 3;
@@ -94,7 +94,7 @@ export default function PulseBall({
       const canvas = canvasRef.current;
       if (!canvas) return;
 
-      const ctx = canvas.getContext("2d");
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
       if (!ctx) return;
 
       const ball = ballRef.current;
