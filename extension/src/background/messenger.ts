@@ -38,9 +38,12 @@ export default class Messenger {
       Messenger.onCSMessage(message);
     }
 
-    return [MessageTypeUItoBG.GET_DATA].includes(
-      message.type as MessageTypeUItoBG,
-    );
+    return [
+      MessageTypeUItoBG.GET_DATA,
+      MessageTypeUItoBG.SUBSCRIBE_TO_CHANGES,
+      MessageTypeUItoBG.UNSUBSCRIBE_TO_CHANGES,
+      MessageTypeUItoBG.LOAD_CONFIG,
+    ].includes(message.type as MessageTypeUItoBG);
   }
 
   static isUIMessage(msg: { type: string }): msg is MessageUItoBG {
@@ -102,12 +105,20 @@ export default class Messenger {
     console.log("[REP] ", data);
     if (Messenger.changeListenerCount > 0) {
       try {
-        chrome.runtime.sendMessage<MessageBGtoUI>({
-          type: MessageTypeBGtoUI.CHANGES,
-          data,
-        });
+        chrome.runtime.sendMessage<MessageBGtoUI>(
+          {
+            type: MessageTypeBGtoUI.CHANGES,
+            data,
+          },
+          (response) => {
+            if (chrome.runtime.lastError) {
+              // This is expected when the UI popup is closed
+              console.log("[REP] UI not available:", chrome.runtime.lastError.message);
+            }
+          }
+        );
       } catch (err) {
-        console.warn("[REP] UI not open", err);
+        console.warn("[REP] Failed to send message:", err);
       }
     }
   }

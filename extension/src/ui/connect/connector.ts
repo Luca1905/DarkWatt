@@ -74,19 +74,23 @@ export default class Connector implements ExtensionActions {
     this.changeSubscribers.add(callback);
     if (this.changeSubscribers.size === 1) {
       chrome.runtime.onMessage.addListener(this.onChangesReceived);
-      chrome.runtime.sendMessage<MessageUItoBG>(
-        {
-          type: MessageTypeUItoBG.SUBSCRIBE_TO_CHANGES,
-        },
-        () => {
-          if (chrome.runtime.lastError) {
-            console.warn(
-              "[Connector] Error subscribing to changes:",
-              chrome.runtime.lastError.message,
-            );
-          }
-        },
-      );
+      try {
+        chrome.runtime.sendMessage<MessageUItoBG>(
+          {
+            type: MessageTypeUItoBG.SUBSCRIBE_TO_CHANGES,
+          },
+          (response) => {
+            if (chrome.runtime.lastError) {
+              console.warn(
+                "[Connector] Error subscribing to changes:",
+                chrome.runtime.lastError.message,
+              );
+            }
+          },
+        );
+      } catch (error) {
+        console.error("[Connector] Failed to subscribe to changes:", error);
+      }
     }
   }
 
@@ -94,19 +98,23 @@ export default class Connector implements ExtensionActions {
     if (this.changeSubscribers.size > 0) {
       this.changeSubscribers.clear();
       chrome.runtime.onMessage.removeListener(this.onChangesReceived);
-      chrome.runtime.sendMessage<MessageUItoBG>(
-        {
-          type: MessageTypeUItoBG.UNSUBSCRIBE_TO_CHANGES,
-        },
-        () => {
-          if (chrome.runtime.lastError) {
-            console.warn(
-              "[Connector] Error unsubscribing from changes:",
-              chrome.runtime.lastError.message,
-            );
-          }
-        },
-      );
+      try {
+        chrome.runtime.sendMessage<MessageUItoBG>(
+          {
+            type: MessageTypeUItoBG.UNSUBSCRIBE_TO_CHANGES,
+          },
+          (response) => {
+            if (chrome.runtime.lastError) {
+              console.warn(
+                "[Connector] Error unsubscribing from changes:",
+                chrome.runtime.lastError.message,
+              );
+            }
+          },
+        );
+      } catch (error) {
+        console.error("[Connector] Failed to unsubscribe from changes:", error);
+      }
     }
   }
 }
