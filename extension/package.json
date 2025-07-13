@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "build": "bun run config/build.ts",
+    "pack": "bun run config/pack.ts",
     "css": "postcss",
     "typecheck": "tsc --noEmit",
     "check": "biome check .",
