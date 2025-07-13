@@ -101,15 +101,17 @@ export default function PulseBall({
 
       // Update pulse intensity and color based on mode
       if (isDarkMode) {
-        // Active state (dark mode) - more intense pulsation
+        // Active state (dark mode) - more intense pulsation, larger size
         ball.pulseIntensity = 0.3;
         ball.targetHue = 120; // Green hue for dark mode
         ball.colorScheme = "dark";
+        ball.baseRadius = 120 * luminanceScale; // Larger in dark mode
       } else {
-        // Resting state (light mode) - subtle pulsation
+        // Resting state (light mode) - subtle pulsation, smaller size
         ball.pulseIntensity = 0.1;
         ball.targetHue = 200; // Blue hue for light mode
         ball.colorScheme = "light";
+        ball.baseRadius = 80 * luminanceScale; // Smaller in light mode
       }
 
       ctx.fillStyle = "rgba(0,0,0,1)";
@@ -125,7 +127,6 @@ export default function PulseBall({
         0.5,
         Math.min(1.5, currentLuminance / 100),
       );
-      ball.baseRadius = 100 * luminanceScale;
       ball.targetRadius = ball.baseRadius * pulseFactor;
 
       ball.currentRadius += (ball.targetRadius - ball.currentRadius) * 0.1;
@@ -258,7 +259,7 @@ export default function PulseBall({
   }, [convertToAscii, isDarkMode, currentLuminance]);
 
   return (
-    <div className="relative w-full h-80 bg-black border border-green-500 overflow-hidden inset-0">
+    <div className="relative w-full h-80 bg-black border border-green-500 overflow-hidden">
       <canvas ref={canvasRef} className="absolute inset-0 opacity-0" />
       <div
         ref={asciiRef}
@@ -274,7 +275,7 @@ export default function PulseBall({
         <div
           className={`text-xs font-mono ${isDarkMode ? "text-green-400" : "text-green-300"}`}
         >
-          LUMINANCE: {Math.round(currentLuminance)} nits
+          LUMINANCE: {currentLuminance.toFixed(2)} nits
         </div>
         <div
           className={`text-xs font-mono ${isDarkMode ? "text-green-600" : "text-green-500"}`}
