@@ -99,6 +99,12 @@ export default function PulseBall({
 
       const ball = ballRef.current;
 
+      // Scale base radius based on luminance (higher luminance = larger ball)
+      const luminanceScale = Math.max(
+        0.5,
+        Math.min(1.5, currentLuminance / 100),
+      );
+
       // Update pulse intensity and color based on mode
       if (isDarkMode) {
         // Active state (dark mode) - more intense pulsation, larger size
@@ -121,12 +127,6 @@ export default function PulseBall({
       const pulseFactor =
         Math.sin(time * (isDarkMode ? 2 : 1)) * ball.pulseIntensity +
         (1 - ball.pulseIntensity);
-
-      // Scale base radius based on luminance (higher luminance = larger ball)
-      const luminanceScale = Math.max(
-        0.5,
-        Math.min(1.5, currentLuminance / 100),
-      );
       ball.targetRadius = ball.baseRadius * pulseFactor;
 
       ball.currentRadius += (ball.targetRadius - ball.currentRadius) * 0.1;
