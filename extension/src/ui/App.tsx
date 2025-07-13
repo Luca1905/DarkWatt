@@ -1,435 +1,268 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { ExtensionData, LuminanceRecord } from "@/definitions";
+"use client";
+
+import { Moon, Zap } from "lucide-react";
+import { useState } from "react";
 import {
-  ChartAreaInteractive,
-  type ChartData,
-} from "@/ui/components/chart-area-interactive";
-import { StatCard } from "@/ui/components/StatCard";
-import Connector from "@/ui/connect/connector";
-import storage from "@/utils/storage";
-import type { Nullable } from "@/utils/types";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/ui/components/dialog";
+import PulseBall from "@/ui/components/pulse-ball";
+import { Switch } from "@/ui/components/switch";
 
-type AppState = { [K in keyof ExtensionData]: Nullable<ExtensionData[K]> };
-
-const initialState: AppState = {
-  currentLuminance: null,
-  totalTrackedSites: null,
-  savings: { currentSite: null, today: null, week: null, total: null },
-  displayInfo: {
-    dimensions: { width: null, height: null },
-    workArea: { width: null, height: null },
-  },
-};
-
-export const App: React.FC = () => {
-  const isMounted = useRef(false);
-  const [state, setState] = useState<AppState>(initialState);
-  const [activeTab, setActiveTab] = useState("dashboard");
-  const [chartData, setChartData] = useState<ChartData[]>([]);
-  const [weeklyAverage, setWeeklyAverage] = useState<number | null>(null);
-
-  const safeSetState = useCallback((updates: Partial<AppState>) => {
-    if (isMounted.current) setState((prev) => ({ ...prev, ...updates }));
-  }, []);
-
-  const loadChartData = useCallback(async () => {
-    const data = await storage.QUERIES.getAllLuminanceData();
-    const filtered = data.filter(
-      (r: LuminanceRecord) =>
-        Date.now() - new Date(r.date).getTime() <= 86_400_000,
-    );
-    const points = 20;
-    const sample =
-      filtered.length <= points
-        ? filtered
-        : Array.from(
-            { length: points },
-            (_, i) => filtered[Math.floor((i * filtered.length) / points)],
-          );
-    const mapped = sample.map((r: LuminanceRecord) => ({
-      time: new Date(r.date).toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-      luminance: r.luminance,
-      date: r.date,
-    }));
-    if (isMounted.current) setChartData(mapped);
-  }, []);
-
-  const loadWeeklyAverage = useCallback(async () => {
-    const now = new Date();
-    const weekAgo = new Date(now.getTime() - 604_800_000);
-    const avg = await storage.QUERIES.getLuminanceAverageForDateRange(
-      weekAgo,
-      now,
-    );
-    if (isMounted.current) setWeeklyAverage(avg);
-  }, []);
-
-  const hydrate = useCallback(
-    async (incoming?: Partial<AppState>) => {
-      if (incoming) safeSetState(incoming);
-      await Promise.all([loadChartData(), loadWeeklyAverage()]);
-      const info = await storage.QUERIES.getDisplayInfo();
-      if (info) safeSetState({ displayInfo: info } as Partial<AppState>);
-    },
-    [loadChartData, loadWeeklyAverage, safeSetState],
+function TerminalStat({
+  icon: Icon,
+  value,
+  label,
+  trend,
+}: {
+  icon: any;
+  value: string;
+  label: string;
+  trend?: { direction: "up" | "down"; value: string };
+}) {
+  return (
+    <div className="bg-black border border-green-500 p-3 font-mono">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-green-400">&gt;</span>
+          <Icon className="h-4 w-4 text-green-400" />
+          <span className="text-green-300 text-sm">{label}:</span>
+        </div>
+        {trend && (
+          <span className="text-green-400 text-xs">
+            [{trend.direction === "up" ? "↑" : "↓"}
+            {trend.value}]
+          </span>
+        )}
+      </div>
+      <div className="mt-1 ml-6">
+        <span className="text-green-100 font-bold text-lg">{value}</span>
+      </div>
+    </div>
   );
+}
 
-  useEffect(() => {
-    isMounted.current = true;
-    console.log("load");
-    const connector = new Connector();
-
-    // @ts-ignore
-    window.connector = { connector };
-
-    connector.getData().then(hydrate);
-    connector.subscribeToChanges(hydrate);
-
-    const handleVisibility = () => {
-      if (document.visibilityState === "hidden") {
-        console.log("unload");
-        connector.disconnect();
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibility);
-      isMounted.current = false;
-      connector.disconnect();
-    };
-  }, [hydrate]);
-
-  // @ts-ignore
-  window.darkWattStateStore = { appState: state };
-
-  const getTrend = (current: number | null, average: number | null) => {
-    if (!current || !average) return undefined;
-    const diff = current - average;
-    const pct = Math.abs((diff / average) * 100).toFixed(1);
-    return {
-      direction: diff > 0 ? "up" : diff < 0 ? "down" : "neutral",
-      value: `${pct}%`,
-    } as const;
-  };
-
-  const currentTrend = getTrend(state.currentLuminance, weeklyAverage);
+function TerminalSettingsDialog() {
+  const [settings, setSettings] = useState({
+    autoDetect: true,
+    notifications: true,
+    aggressiveMode: false,
+  });
 
   return (
-    <div className="w-[420px] h-[640px] bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-white flex flex-col">
-      <div className="relative bg-gradient-to-r from-slate-900/90 to-slate-800/90 backdrop-blur-sm border-b border-slate-700/50 flex-shrink-0">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <img
-                  src="assets/images/darkwatt-icon-256.png"
-                  alt="DarkWatt"
-                  className="w-10 h-10 rounded-lg"
-                />
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50" />
+    <Dialog>
+      <DialogTrigger asChild>
+        <button
+          type="button"
+          className="text-green-400 hover:text-green-300 font-mono text-sm border border-green-500 px-2 py-1 bg-black"
+        >
+          [CFG]
+        </button>
+      </DialogTrigger>
+      <DialogContent className="bg-black border-2 border-green-500 text-green-100 font-mono rounded-none max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-green-400 font-mono">
+            === DARKWATT CONFIGURATION ===
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="border border-green-700 p-2">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-green-300">AUTO_DETECT_MODE</span>
+              <span className="text-green-400">
+                [{settings.autoDetect ? "ON" : "OFF"}]
+              </span>
+            </div>
+            <div className="text-xs text-green-600 mb-2">
+              &gt; Automatically scan for dark mode support
+            </div>
+            <Switch
+              checked={settings.autoDetect}
+              onCheckedChange={(checked) =>
+                setSettings((prev) => ({ ...prev, autoDetect: checked }))
+              }
+              className="data-[state=checked]:bg-green-600"
+            />
+          </div>
+
+          <div className="border border-green-700 p-2">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-green-300">NOTIFICATIONS</span>
+              <span className="text-green-400">
+                [{settings.notifications ? "ON" : "OFF"}]
+              </span>
+            </div>
+            <div className="text-xs text-green-600 mb-2">
+              &gt; Alert when dark mode opportunities detected
+            </div>
+            <Switch
+              checked={settings.notifications}
+              onCheckedChange={(checked) =>
+                setSettings((prev) => ({ ...prev, notifications: checked }))
+              }
+              className="data-[state=checked]:bg-green-600"
+            />
+          </div>
+
+          <div className="border border-green-700 p-2">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-green-300">FORCE_DARK_MODE</span>
+              <span className="text-green-400">
+                [{settings.aggressiveMode ? "ON" : "OFF"}]
+              </span>
+            </div>
+            <div className="text-xs text-green-600 mb-2">
+              &gt; Override site styling with dark theme
+            </div>
+            <Switch
+              checked={settings.aggressiveMode}
+              onCheckedChange={(checked) =>
+                setSettings((prev) => ({ ...prev, aggressiveMode: checked }))
+              }
+              className="data-[state=checked]:bg-green-600"
+            />
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function TerminalAnalyticsDialog() {
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <button
+          type="button"
+          className="text-green-400 hover:text-green-300 font-mono text-sm border border-green-500 px-2 py-1 bg-black"
+        >
+          [LOG]
+        </button>
+      </DialogTrigger>
+      <DialogContent className="bg-black border-2 border-green-500 text-green-100 font-mono rounded-none max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-green-400 font-mono">
+            === ENERGY ANALYTICS LOG ===
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="border border-green-700 p-3">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <div className="text-green-400 text-xs">TOTAL_SAVED:</div>
+                <div className="text-green-100 font-bold">2.4kWh</div>
               </div>
               <div>
-                <h1 className="text-xl font-bold text-white">DarkWatt</h1>
-                <p className="text-xs text-slate-400">Energy Monitor</p>
+                <div className="text-green-400 text-xs">SITES_OPT:</div>
+                <div className="text-green-100 font-bold">156</div>
               </div>
             </div>
-            <div className="flex items-center gap-2 bg-green-400/10 rounded-full px-3 py-1.5 border border-green-400/20">
-              <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-              <span className="text-xs text-green-400 font-medium">Live</span>
+          </div>
+
+          <div className="border border-green-700 p-3 space-y-2 text-xs">
+            <div className="flex justify-between">
+              <span className="text-green-400">WEEK_TOTAL:</span>
+              <span className="text-green-100">847W</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-green-400">CO2_REDUCED:</span>
+              <span className="text-green-100">1.2kg</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-green-400">BATTERY_EXT:</span>
+              <span className="text-green-100">+4.2hrs</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-green-400">UPTIME:</span>
+              <span className="text-green-100">23d 14h</span>
             </div>
           </div>
         </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
-        <div className="px-6 pb-4">
-          <div className="flex bg-slate-800/50 rounded-xl p-1 border border-slate-700/50">
-            {[
-              { id: "dashboard", label: "Dashboard", icon: "📊" },
-              { id: "analytics", label: "Analytics", icon: "📈" },
-              { id: "settings", label: "Settings", icon: "⚙️" },
-            ].map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setActiveTab(t.id)}
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  activeTab === t.id
-                    ? "bg-green-400/20 text-green-400 shadow-lg shadow-green-400/10 border border-green-400/30"
-                    : "text-slate-400 hover:text-white hover:bg-slate-700/50"
-                }`}
-              >
-                <span className="text-base">{t.icon}</span>
-                <span>{t.label}</span>
-              </button>
-            ))}
+export default function DarkWattTerminal() {
+  const [_reactorHealth, _setReactorHealth] = useState(85);
+  const [energySaved, _setEnergySaved] = useState(247);
+  const [darkSites, _setDarkSites] = useState(12);
+
+  return (
+    <div className="w-[450px] h-[800px] bg-black text-green-100 font-mono overflow-hidden border-2 border-green-500">
+      {/* Terminal Header */}
+      <div className="bg-black border-b-2 border-green-500 p-3">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <span className="text-green-400">█</span>
+            <div>
+              <div className="text-green-400 font-bold">DARKWATT v1.0.0</div>
+              <div className="text-green-600 text-xs">
+                REACTOR CORE ENERGY SYSTEM
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <TerminalAnalyticsDialog />
+            <TerminalSettingsDialog />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2">
+            <span className="text-green-400">[STATUS]</span>
+            <span className="text-green-300">ACTIVE</span>
+            <span className="text-green-600">CORE PULSING...</span>
+          </div>
+          <div className="text-right">
+            <div className="text-green-100">{energySaved}W SAVED</div>
+            <div className="text-green-600">TODAY</div>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto min-h-0">
-        <div className="p-6">
-          {activeTab === "dashboard" && (
-            <div className="space-y-6 animate-[fadeIn_0.4s_ease-out]">
-              <div>
-                <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                  <span className="text-xl">⚡</span>
-                  Live Monitoring
-                </h2>
-                <div className="grid grid-cols-1 gap-4">
-                  <StatCard
-                    title="Current Screen Luminance"
-                    value={state.currentLuminance ?? "--"}
-                    unit="nits"
-                    icon="💡"
-                    isLoading={state.currentLuminance === null}
-                    trend={currentTrend?.direction}
-                    trendValue={currentTrend?.value}
-                    size="lg"
-                    floatingPointRepresentation
-                  />
-                  <div className="grid grid-cols-2 gap-4">
-                    <StatCard
-                      title="Saved on this site"
-                      value={state.savings.currentSite ?? "--"}
-                      unit="mWh"
-                      icon="💚"
-                      isLoading={state.savings.currentSite === null}
-                      size="md"
-                      floatingPointRepresentation
-                    />
-                  </div>
-                </div>
+      <div className="flex-1 flex flex-col justify-center p-4">
+        <div className="flex-1 flex items-center justify-center mb-4">
+          <div className="w-full">
+            <div className="text-center mb-2">
+              <div className="text-green-400 font-mono text-sm">
+                ╔══════════════════════════════════════════╗
               </div>
-
-              <div>
-                <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                  <span className="text-xl">🌱</span>
-                  Energy Savings
-                </h2>
-                <div className="grid grid-cols-3 gap-3">
-                  <StatCard
-                    title="Today"
-                    value={state.savings.today ?? "--"}
-                    unit="mWh"
-                    isLoading={state.savings.today === null}
-                    size="sm"
-                    floatingPointRepresentation
-                  />
-                  <StatCard
-                    title="This Week"
-                    value={state.savings.week ?? "--"}
-                    unit="mWh"
-                    isLoading={state.savings.week === null}
-                    size="sm"
-                    floatingPointRepresentation
-                  />
-                  <StatCard
-                    title="Total"
-                    value={state.savings.total ?? "--"}
-                    unit="mWh"
-                    isLoading={state.savings.total === null}
-                    size="sm"
-                    floatingPointRepresentation
-                  />
-                </div>
+              <div className="text-green-400 font-mono text-sm">
+                ║ PULSATING REACTOR CORE DISPLAY ║
               </div>
-
-              <div>
-                <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                  <span className="text-xl">📍</span>
-                  Activity Overview
-                </h2>
-                <div className="grid grid-cols-2 gap-4">
-                  <StatCard
-                    title="Tracked Websites"
-                    value={state.totalTrackedSites ?? "--"}
-                    icon="🌐"
-                    isLoading={state.totalTrackedSites === null}
-                    size="md"
-                    floatingPointRepresentation={false}
-                  />
-                  <StatCard
-                    title="Weekly Average"
-                    value={weeklyAverage ?? "--"}
-                    unit="nits"
-                    icon="📊"
-                    isLoading={weeklyAverage === null}
-                    size="md"
-                    floatingPointRepresentation
-                  />
-                </div>
+              <div className="text-green-400 font-mono text-sm">
+                ╚══════════════════════════════════════════╝
               </div>
             </div>
-          )}
 
-          {activeTab === "analytics" && (
-            <div className="space-y-6 animate-[fadeIn_0.4s_ease-out]">
-              <div>
-                <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                  <span className="text-xl">📈</span>
-                  Luminance Trends
-                </h2>
-                <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 overflow-hidden">
-                  <ChartAreaInteractive chartData={chartData} timeRange="30s" />
-                </div>
-              </div>
+            <PulseBall />
+          </div>
+        </div>
 
-              <div>
-                <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                  <span className="text-xl">📊</span>
-                  Summary Statistics
-                </h2>
-                <div className="grid grid-cols-2 gap-4">
-                  <StatCard
-                    title="Data Points"
-                    value={chartData.length}
-                    icon="🔢"
-                    size="md"
-                    floatingPointRepresentation={false}
-                  />
-                  <StatCard
-                    title="Avg. Luminance"
-                    value={weeklyAverage ?? "--"}
-                    unit="nits"
-                    icon="📊"
-                    isLoading={weeklyAverage === null}
-                    size="md"
-                    floatingPointRepresentation
-                  />
-                </div>
-              </div>
+        <div className="space-y-3">
+          <TerminalStat
+            icon={Zap}
+            value={`${energySaved}W`}
+            label="ENERGY_SAVED"
+            trend={{ direction: "up", value: "12%" }}
+          />
+          <TerminalStat
+            icon={Moon}
+            value={darkSites.toString()}
+            label="DARK_SITES"
+          />
+        </div>
 
-              <div>
-                <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                  <span className="text-xl">🌍</span>
-                  Environmental Impact
-                </h2>
-                <div className="bg-gradient-to-r from-green-400/10 to-emerald-400/10 rounded-xl p-4 border border-green-400/20">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 bg-green-400/20 rounded-full flex items-center justify-center">
-                      <span className="text-xl">🌱</span>
-                    </div>
-                    <div>
-                      <h3 className="text-base font-semibold text-white">
-                        Carbon Footprint
-                      </h3>
-                      <p className="text-sm text-slate-400">
-                        Estimated CO₂ reduction
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-2xl font-bold text-green-400">
-                    {state.savings.total
-                      ? (state.savings.total * 0.0005).toFixed(3)
-                      : "--"}{" "}
-                    kg CO₂
-                  </div>
-                  <p className="text-xs text-slate-400 mt-2">
-                    Based on average energy grid carbon intensity
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "settings" && (
-            <div className="space-y-6 animate-[fadeIn_0.4s_ease-out]">
-              <div>
-                <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                  <span className="text-xl">🖥️</span>
-                  Display Information
-                </h2>
-                <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-green-400">
-                        {state.displayInfo?.dimensions?.width &&
-                        state.displayInfo?.dimensions?.height
-                          ? Math.sqrt(
-                              state.displayInfo.dimensions.width ** 2 +
-                                state.displayInfo.dimensions.height ** 2,
-                            ).toFixed(1)
-                          : "--"}
-                      </div>
-                      <div className="text-sm text-slate-400">
-                        Diagonal (inches)
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-green-400">
-                        {state.displayInfo?.dimensions?.width &&
-                        state.displayInfo?.dimensions?.height
-                          ? (() => {
-                              const gcd = (a: number, b: number): number =>
-                                b === 0 ? a : gcd(b, a % b);
-                              const w = Math.round(
-                                state.displayInfo.dimensions.width * 10,
-                              );
-                              const h = Math.round(
-                                state.displayInfo.dimensions.height * 10,
-                              );
-                              const d = gcd(w, h);
-                              return `${w / d}:${h / d}`;
-                            })()
-                          : "--"}
-                      </div>
-                      <div className="text-sm text-slate-400">Aspect Ratio</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                  <span className="text-xl">⚙️</span>
-                  System Status
-                </h2>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
-                    <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                      <span className="text-sm font-medium text-white">
-                        Monitoring Active
-                      </span>
-                    </div>
-                    <span className="text-xs text-green-400">Running</span>
-                  </div>
-                  <div className="flex items-center justify-between bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
-                    <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 bg-blue-400 rounded-full" />
-                      <span className="text-sm font-medium text-white">
-                        Data Collection
-                      </span>
-                    </div>
-                    <span className="text-xs text-blue-400">Enabled</span>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                  <span className="text-xl">ℹ️</span>
-                  About DarkWatt
-                </h2>
-                <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
-                  <p className="text-sm text-slate-300 leading-relaxed mb-3">
-                    DarkWatt monitors your screen's luminance and calculates
-                    potential energy savings from using dark mode themes and
-                    reducing screen brightness.
-                  </p>
-                  <div className="flex items-center gap-2 text-xs text-slate-400">
-                    <span>Version 1.0.0</span>
-                    <span>•</span>
-                    <span>Built with ❤️ for sustainability</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+        <div className="mt-4 text-center text-green-600 text-xs">
+          <div>{"─".repeat(42)}</div>
+          <div>POWER THE CORE • SAVE THE PLANET</div>
+          <div>{"─".repeat(42)}</div>
         </div>
       </div>
     </div>
   );
-};
+}
