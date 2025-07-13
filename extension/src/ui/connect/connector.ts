@@ -19,27 +19,42 @@ export default class Connector implements ExtensionActions {
     data?: string,
   ): Promise<T> {
     return new Promise<T>((resolve, reject) => {
-      chrome.runtime.sendMessage<MessageUItoBG>(
-        { type, data },
-        (response: { data?: T; error?: string } | null) => {
-          if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message));
-            return;
-          }
+      try {
+        chrome.runtime.sendMessage<MessageUItoBG>(
+          { type, data },
+          (response: { data?: T; error?: string } | null) => {
+            if (chrome.runtime.lastError) {
+              console.error(
+                "[Connector] Chrome runtime error:",
+                chrome.runtime.lastError,
+              );
+              reject(
+                new Error(
+                  `Connection error: ${chrome.runtime.lastError.message}`,
+                ),
+              );
+              return;
+            }
 
-          if (response == null) {
-            reject(new Error("No response from background script"));
-            return;
-          }
+            if (response == null) {
+              console.error("[Connector] No response from background script");
+              reject(new Error("No response from background script"));
+              return;
+            }
 
-          const { data: responseData, error } = response;
-          if (error) {
-            reject(error);
-          } else {
-            resolve(responseData as T);
-          }
-        },
-      );
+            const { data: responseData, error } = response;
+            if (error) {
+              console.error("[Connector] Background script error:", error);
+              reject(new Error(`Background script error: ${error}`));
+            } else {
+              resolve(responseData as T);
+            }
+          },
+        );
+      } catch (error) {
+        console.error("[Connector] Failed to send message:", error);
+        reject(new Error(`Failed to send message: ${error}`));
+      }
     });
   }
 
@@ -59,19 +74,23 @@ export default class Connector implements ExtensionActions {
     this.changeSubscribers.add(callback);
     if (this.changeSubscribers.size === 1) {
       chrome.runtime.onMessage.addListener(this.onChangesReceived);
-      chrome.runtime.sendMessage<MessageUItoBG>(
-        {
-          type: MessageTypeUItoBG.SUBSCRIBE_TO_CHANGES,
-        },
-        () => {
-          if (chrome.runtime.lastError) {
-            console.warn(
-              "[Connector] Error subscribing to changes:",
-              chrome.runtime.lastError.message,
-            );
-          }
-        },
-      );
+      try {
+        chrome.runtime.sendMessage<MessageUItoBG>(
+          {
+            type: MessageTypeUItoBG.SUBSCRIBE_TO_CHANGES,
+          },
+          (response) => {
+            if (chrome.runtime.lastError) {
+              console.warn(
+                "[Connector] Error subscribing to changes:",
+                chrome.runtime.lastError.message,
+              );
+            }
+          },
+        );
+      } catch (error) {
+        console.error("[Connector] Failed to subscribe to changes:", error);
+      }
     }
   }
 
@@ -79,19 +98,23 @@ export default class Connector implements ExtensionActions {
     if (this.changeSubscribers.size > 0) {
       this.changeSubscribers.clear();
       chrome.runtime.onMessage.removeListener(this.onChangesReceived);
-      chrome.runtime.sendMessage<MessageUItoBG>(
-        {
-          type: MessageTypeUItoBG.UNSUBSCRIBE_TO_CHANGES,
-        },
-        () => {
-          if (chrome.runtime.lastError) {
-            console.warn(
-              "[Connector] Error unsubscribing from changes:",
-              chrome.runtime.lastError.message,
-            );
-          }
-        },
-      );
+      try {
+        chrome.runtime.sendMessage<MessageUItoBG>(
+          {
+            type: MessageTypeUItoBG.UNSUBSCRIBE_TO_CHANGES,
+          },
+          (response) => {
+            if (chrome.runtime.lastError) {
+              console.warn(
+                "[Connector] Error unsubscribing from changes:",
+                chrome.runtime.lastError.message,
+              );
+            }
+          },
+        );
+      } catch (error) {
+        console.error("[Connector] Failed to unsubscribe from changes:", error);
+      }
     }
   }
 }
