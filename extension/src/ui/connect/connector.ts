@@ -24,8 +24,15 @@ export default class Connector implements ExtensionActions {
           { type, data },
           (response: { data?: T; error?: string } | null) => {
             if (chrome.runtime.lastError) {
-              console.error("[Connector] Chrome runtime error:", chrome.runtime.lastError);
-              reject(new Error(`Connection error: ${chrome.runtime.lastError.message}`));
+              console.error(
+                "[Connector] Chrome runtime error:",
+                chrome.runtime.lastError,
+              );
+              reject(
+                new Error(
+                  `Connection error: ${chrome.runtime.lastError.message}`,
+                ),
+              );
               return;
             }
 

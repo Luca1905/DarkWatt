@@ -134,21 +134,21 @@ async function main() {
     console.error("[DARKWATT] Failed to initialize WASM module:", error);
     // Continue without WASM if it fails
   }
-  
+
   try {
     await refreshDisplayInfo();
     console.log("[DARKWATT] Display info refreshed successfully");
   } catch (error) {
     console.error("[DARKWATT] Failed to refresh display info:", error);
   }
-  
+
   try {
     hello_wasm();
     console.log("[DARKWATT] WASM hello_wasm called successfully");
   } catch (error) {
     console.error("[DARKWATT] Failed to call hello_wasm:", error);
   }
-  
+
   console.log("[DARKWATT] Starting sample loop...");
   sampleLoop();
 }
