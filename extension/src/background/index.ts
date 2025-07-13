@@ -78,7 +78,7 @@ async function sampleLoop(): Promise<void> {
       const newSavings = estimateSavingsWh(
         response.dataUrl ?? "<NO_SITE>",
         getDisplayDimensions(),
-        1,
+        1 / 60,
         DisplayTech.LCD,
       );
 
